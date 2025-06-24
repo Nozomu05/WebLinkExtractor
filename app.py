@@ -21,6 +21,113 @@ def is_valid_url(url):
     except:
         return False
 
+def display_formatted_content(content):
+    """
+    Display content in a well-formatted, readable way
+    """
+    if not content:
+        st.warning("No content to display")
+        return
+    
+    # Split content into lines for processing
+    lines = content.split('\n')
+    
+    current_section = []
+    in_list = False
+    list_items = []
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Skip empty lines but add spacing
+        if not line:
+            if current_section:
+                # Display accumulated content
+                if current_section:
+                    paragraph_text = ' '.join(current_section).strip()
+                    if paragraph_text:
+                        st.markdown(paragraph_text)
+                    current_section = []
+            if in_list and list_items:
+                # Display accumulated list
+                for item in list_items:
+                    st.markdown(f"• {item}")
+                list_items = []
+                in_list = False
+            continue
+        
+        # Handle headings
+        if line.startswith('#'):
+            # Display any accumulated content first
+            if current_section:
+                paragraph_text = ' '.join(current_section).strip()
+                if paragraph_text:
+                    st.markdown(paragraph_text)
+                current_section = []
+            
+            # Count heading level and display
+            heading_level = len(line) - len(line.lstrip('#'))
+            heading_text = line.lstrip('# ').strip()
+            
+            if heading_level == 1:
+                st.header(heading_text)
+            elif heading_level == 2:
+                st.subheader(heading_text)
+            elif heading_level == 3:
+                st.markdown(f"### {heading_text}")
+            else:
+                st.markdown(f"{'#' * heading_level} {heading_text}")
+        
+        # Handle list items
+        elif line.startswith('•') or line.startswith('-') or line.startswith('*'):
+            # Display any accumulated paragraph content
+            if current_section:
+                paragraph_text = ' '.join(current_section).strip()
+                if paragraph_text:
+                    st.markdown(paragraph_text)
+                current_section = []
+            
+            # Add to list
+            list_item = line.lstrip('•-* ').strip()
+            if list_item:
+                list_items.append(list_item)
+                in_list = True
+        
+        # Handle table-like content (with |)
+        elif '|' in line and line.count('|') >= 2:
+            # Display any accumulated content
+            if current_section:
+                paragraph_text = ' '.join(current_section).strip()
+                if paragraph_text:
+                    st.markdown(paragraph_text)
+                current_section = []
+            
+            # Display table row
+            st.markdown(line)
+        
+        # Regular content
+        else:
+            # If we were in a list, display it first
+            if in_list and list_items:
+                for item in list_items:
+                    st.markdown(f"• {item}")
+                list_items = []
+                in_list = False
+            
+            # Add to current paragraph
+            if line:
+                current_section.append(line)
+    
+    # Display any remaining content
+    if current_section:
+        paragraph_text = ' '.join(current_section).strip()
+        if paragraph_text:
+            st.markdown(paragraph_text)
+    
+    if in_list and list_items:
+        for item in list_items:
+            st.markdown(f"• {item}")
+
 def main():
     st.title("🔍 URL Content Extractor")
     st.markdown("Extract and organize webpage content into logical topic groups")
@@ -78,8 +185,8 @@ def main():
                 st.subheader("📄 Extracted Content")
                 st.markdown("*Content displayed as it appears on the original webpage*")
                 
-                # Display the content in a clean format
-                st.markdown(content)
+                # Display content with improved formatting
+                display_formatted_content(content)
                 
                 # Add export functionality
                 st.divider()
