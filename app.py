@@ -23,54 +23,17 @@ def is_valid_url(url):
 
 def display_formatted_content(content):
     """
-    Display content with enhanced visual appeal and formatting
+    Display content with clean, readable formatting
     """
     if not content:
         st.warning("No content to display")
         return
-    
-    # Add custom CSS for better styling
-    st.markdown("""
-    <style>
-    .content-block {
-        margin-bottom: 15px;
-        padding: 12px;
-        border-left: 3px solid #e6e6e6;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-    }
-    .heading-block {
-        margin: 20px 0 15px 0;
-        padding: 15px;
-        background: linear-gradient(90deg, #f0f2f6 0%, #ffffff 100%);
-        border-left: 4px solid #4CAF50;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .list-container {
-        background-color: #fff;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-    }
-    .table-container {
-        background-color: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 15px 0;
-        overflow: auto;
-    }
-    </style>
-    """, unsafe_allow_html=True)
     
     # Split content into lines for processing
     lines = content.split('\n')
     
     in_list = False
     list_items = []
-    paragraph_count = 0
     
     for line in lines:
         line = line.strip()
@@ -79,37 +42,37 @@ def display_formatted_content(content):
         if not line:
             # If we were building a list, display it
             if in_list and list_items:
-                st.markdown('<div class="list-container">', unsafe_allow_html=True)
+                st.markdown("**List Items:**")
                 for item in list_items:
-                    st.markdown(f"🔸 {item}")
-                st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown(f"• {item}")
+                st.markdown("")  # Add spacing
                 list_items = []
                 in_list = False
             continue
         
-        # Handle headings with enhanced styling
+        # Handle headings
         if line.startswith('#'):
             # Display any accumulated list first
             if in_list and list_items:
-                st.markdown('<div class="list-container">', unsafe_allow_html=True)
+                st.markdown("**List Items:**")
                 for item in list_items:
-                    st.markdown(f"🔸 {item}")
-                st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown(f"• {item}")
+                st.markdown("")
                 list_items = []
                 in_list = False
             
-            # Count heading level and display with enhanced styling
+            # Count heading level and display
             heading_level = len(line) - len(line.lstrip('#'))
             heading_text = line.lstrip('# ').strip()
             
             if heading_level == 1:
-                st.markdown(f'<div class="heading-block"><h1 style="color: #2E8B57; margin: 0;">{heading_text}</h1></div>', unsafe_allow_html=True)
+                st.header(heading_text)
             elif heading_level == 2:
-                st.markdown(f'<div class="heading-block"><h2 style="color: #4169E1; margin: 0;">{heading_text}</h2></div>', unsafe_allow_html=True)
+                st.subheader(heading_text)
             elif heading_level == 3:
-                st.markdown(f'<div class="heading-block"><h3 style="color: #FF6347; margin: 0;">{heading_text}</h3></div>', unsafe_allow_html=True)
+                st.markdown(f"### {heading_text}")
             else:
-                st.markdown(f'<div class="heading-block"><h{min(heading_level, 6)} style="color: #9370DB; margin: 0;">{heading_text}</h{min(heading_level, 6)}></div>', unsafe_allow_html=True)
+                st.markdown(f"{'#' * heading_level} {heading_text}")
         
         # Handle list items
         elif line.startswith('•') or line.startswith('-') or line.startswith('*'):
@@ -118,51 +81,49 @@ def display_formatted_content(content):
                 list_items.append(list_item)
                 in_list = True
         
-        # Handle table-like content with enhanced styling
+        # Handle table-like content
         elif '|' in line and line.count('|') >= 2:
             # Display any accumulated list first
             if in_list and list_items:
-                st.markdown('<div class="list-container">', unsafe_allow_html=True)
+                st.markdown("**List Items:**")
                 for item in list_items:
-                    st.markdown(f"🔸 {item}")
-                st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown(f"• {item}")
+                st.markdown("")
                 list_items = []
                 in_list = False
             
-            # Display table row with styling
-            st.markdown('<div class="table-container">', unsafe_allow_html=True)
+            # Display table row
             st.markdown(f"**{line}**")
-            st.markdown('</div>', unsafe_allow_html=True)
         
-        # Regular text content with enhanced blocks
+        # Regular text content
         else:
             # Display any accumulated list first
             if in_list and list_items:
-                st.markdown('<div class="list-container">', unsafe_allow_html=True)
+                st.markdown("**List Items:**")
                 for item in list_items:
-                    st.markdown(f"🔸 {item}")
-                st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown(f"• {item}")
+                st.markdown("")
                 list_items = []
                 in_list = False
             
-            # Display text block with enhanced styling
+            # Display text block
             if line and len(line.strip()) > 2:
-                paragraph_count += 1
-                
-                # Add visual variety to paragraphs
+                # Add visual distinction for different content types
                 if len(line) > 200:  # Long paragraphs
-                    st.markdown(f'<div class="content-block"><p style="text-align: justify; line-height: 1.6; font-size: 16px;">{line}</p></div>', unsafe_allow_html=True)
-                elif len(line) < 50:  # Short text - could be captions or labels
-                    st.markdown(f'<div style="padding: 8px; background-color: #e8f4f8; border-radius: 15px; text-align: center; margin: 10px 0; font-style: italic; color: #2c3e50;"><small>{line}</small></div>', unsafe_allow_html=True)
+                    st.markdown(f"**Content:** {line}")
+                    st.markdown("")  # Add spacing
+                elif len(line) < 50:  # Short text
+                    st.info(line)
                 else:  # Regular paragraphs
-                    st.markdown(f'<div class="content-block"><p style="line-height: 1.5;">{line}</p></div>', unsafe_allow_html=True)
+                    st.markdown(line)
+                    st.markdown("")  # Add spacing
     
     # Display any remaining list items
     if in_list and list_items:
-        st.markdown('<div class="list-container">', unsafe_allow_html=True)
+        st.markdown("**List Items:**")
         for item in list_items:
-            st.markdown(f"🔸 {item}")
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(f"• {item}")
+        st.markdown("")
 
 def main():
     # Enhanced title with gradient background
