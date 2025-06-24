@@ -2,8 +2,7 @@ import streamlit as st
 import requests
 import re
 from urllib.parse import urlparse
-from web_scraper import get_website_text_content
-from text_processor import process_and_group_content
+from web_scraper import get_website_text_content, get_structured_content
 
 # Configure the Streamlit page
 st.set_page_config(
@@ -47,10 +46,10 @@ def main():
             return
         
         # Show loading state
-        with st.spinner("Extracting and processing content..."):
+        with st.spinner("Extracting content..."):
             try:
-                # Extract content from the webpage
-                content = get_website_text_content(url_input)
+                # Extract content from the webpage preserving structure
+                content = get_structured_content(url_input)
                 
                 if not content or len(content.strip()) < 50:
                     st.warning("Unable to extract meaningful content from this URL. The page might be:")
@@ -62,40 +61,25 @@ def main():
                     """)
                     return
                 
-                # Process and group the content
-                grouped_content = process_and_group_content(content)
-                
                 # Display results
                 st.success(f"Successfully extracted content from: {url_input}")
                 
                 # Show content statistics
-                col1, col2, col3 = st.columns(3)
+                col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Total Characters", len(content))
                 with col2:
-                    st.metric("Topic Groups", len(grouped_content))
-                with col3:
                     word_count = len(content.split())
                     st.metric("Word Count", word_count)
                 
                 st.divider()
                 
-                # Display grouped content
-                st.subheader("📋 Organized Content by Topics")
+                # Display content preserving original structure
+                st.subheader("📄 Extracted Content")
+                st.markdown("*Content displayed as it appears on the original webpage*")
                 
-                if not grouped_content:
-                    st.info("No distinct topic groups were identified. The content appears to be uniform in nature.")
-                    st.subheader("Full Content")
-                    st.markdown(content)
-                else:
-                    # Display each topic group
-                    for i, group in enumerate(grouped_content, 1):
-                        with st.expander(f"📝 Topic Group {i}: {group['title']}", expanded=True):
-                            st.markdown(group['content'])
-                            
-                            # Show additional metadata if available
-                            if group.get('keywords'):
-                                st.caption(f"Key themes: {', '.join(group['keywords'][:5])}")
+                # Display the content in a clean format
+                st.markdown(content)
                 
                 # Add export functionality
                 st.divider()
@@ -103,12 +87,7 @@ def main():
                 
                 # Prepare export content
                 export_content = f"# Content extracted from: {url_input}\n\n"
-                for i, group in enumerate(grouped_content, 1):
-                    export_content += f"## Topic Group {i}: {group['title']}\n\n"
-                    export_content += f"{group['content']}\n\n"
-                    if group.get('keywords'):
-                        export_content += f"**Key themes:** {', '.join(group['keywords'][:5])}\n\n"
-                    export_content += "---\n\n"
+                export_content += content
                 
                 st.download_button(
                     label="Download as Markdown",
@@ -128,12 +107,11 @@ def main():
     st.divider()
     with st.expander("ℹ️ How it works"):
         st.markdown("""
-        **URL Content Extractor** intelligently processes webpage content through these steps:
+        **URL Content Extractor** extracts webpage content preserving its original structure:
         
         1. **Content Extraction**: Retrieves clean text content from the webpage, removing ads, navigation, and other clutter
-        2. **Text Processing**: Analyzes the content structure and identifies key themes
-        3. **Topic Grouping**: Groups related sentences and paragraphs based on semantic similarity
-        4. **Organization**: Presents content in logical sections with descriptive titles
+        2. **Structure Preservation**: Maintains the original hierarchy and flow of the content
+        3. **Clean Display**: Presents content exactly as it appears on the webpage
         
         **Best Results With:**
         - News articles and blog posts
