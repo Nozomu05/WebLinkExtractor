@@ -1,6 +1,8 @@
 import trafilatura
 import requests
 from urllib.parse import urlparse
+from bs4 import BeautifulSoup
+import re
 
 def get_website_text_content(url: str) -> str:
     """
@@ -86,16 +88,49 @@ def get_structured_content(url: str) -> str:
             response.raise_for_status()
             downloaded = response.text
         
-        # Extract content preserving structure
+        # Extract content preserving structure - maximize content extraction
         text = trafilatura.extract(
             downloaded,
             include_comments=False,
             include_tables=True,
             include_formatting=True,
-            favor_precision=True,
+            favor_precision=False,  # Favor recall over precision to get more content
+            favor_recall=True,
             include_links=False,
-            with_metadata=False
+            with_metadata=False,
+            no_fallback=False,  # Allow fallback methods
+            deduplicate=False   # Don't remove duplicate content
         )
+        
+        # If trafilatura doesn't capture enough content, use BeautifulSoup as fallback
+        if not text or len(text.strip()) < 500:
+            soup = BeautifulSoup(downloaded, 'html.parser')
+            
+            # Remove script and style elements
+            for script in soup(["script", "style", "nav", "header", "footer", "aside"]):
+                script.decompose()
+            
+            # Extract text from main content areas
+            main_content = soup.find('main') or soup.find('article') or soup.find('div', class_=re.compile(r'content|main|article|post', re.I)) or soup.body
+            
+            if main_content:
+                # Get text while preserving some structure
+                paragraphs = main_content.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'section', 'li'])
+                text_parts = []
+                
+                for element in paragraphs:
+                    element_text = element.get_text(strip=True)
+                    if element_text and len(element_text) > 10:  # Filter out very short text
+                        # Add spacing based on element type
+                        if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                            text_parts.append(f"\n# {element_text}\n")
+                        elif element.name == 'p':
+                            text_parts.append(f"{element_text}\n")
+                        else:
+                            text_parts.append(element_text)
+                
+                if text_parts:
+                    text = '\n'.join(text_parts)
         
         if not text:
             raise ValueError("No extractable content found on this page")
