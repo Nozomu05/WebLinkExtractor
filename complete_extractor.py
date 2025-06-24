@@ -13,24 +13,77 @@ def extract_complete_webpage_content(url: str) -> str:
         if not parsed_url.scheme or not parsed_url.netloc:
             raise ValueError("Invalid URL format")
         
-        # Request with proper headers
+        # Enhanced headers to bypass basic bot detection
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+            'DNT': '1',
+            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"'
         }
         
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
+        # Create session for better handling
+        session = requests.Session()
+        session.headers.update(headers)
         
-        # Parse HTML
+        # Try multiple user agents if first fails
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0'
+        ]
+        
+        response = None
+        last_error = None
+        
+        for user_agent in user_agents:
+            try:
+                session.headers.update({'User-Agent': user_agent})
+                response = session.get(url, timeout=20, allow_redirects=True)
+                response.raise_for_status()
+                
+                # Check if we got meaningful content
+                if len(response.text) > 500:
+                    break
+                    
+            except Exception as e:
+                last_error = e
+                continue
+        
+        if not response or response.status_code != 200:
+            if last_error:
+                raise last_error
+            else:
+                raise Exception("Failed to fetch content with any user agent")
+        
+        # Parse HTML with better parser
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Remove only truly unwanted elements
-        for element in soup(['script', 'style', 'noscript', 'meta', 'link']):
+        # Check if page seems to have meaningful content
+        body_text = soup.get_text(strip=True) if soup.body else soup.get_text(strip=True)
+        if len(body_text) < 100:
+            raise Exception("Page appears to have minimal content - may require JavaScript or be behind protection")
+        
+        # Remove unwanted elements but preserve structure
+        for element in soup(['script', 'style', 'noscript', 'meta', 'link', 'iframe']):
+            element.decompose()
+        
+        # Remove common advertisement and navigation elements
+        for element in soup.find_all(['div', 'section'], class_=re.compile(r'(ad|advertisement|sidebar|nav|menu|footer|header)', re.I)):
+            element.decompose()
+        
+        for element in soup.find_all(['div', 'section'], id=re.compile(r'(ad|advertisement|sidebar|nav|menu|footer|header)', re.I)):
             element.decompose()
         
         # Extract content with structure preservation
@@ -140,6 +193,10 @@ def extract_complete_webpage_content(url: str) -> str:
         # Clean up excessive whitespace while preserving structure
         final_content = re.sub(r'\n\s*\n\s*\n+', '\n\n', final_content)
         final_content = re.sub(r'[ \t]+', ' ', final_content)
+        
+        # Final validation
+        if len(final_content.strip()) < 100:
+            raise Exception("Extracted content is too short - page may require JavaScript or special handling")
         
         return final_content.strip()
         

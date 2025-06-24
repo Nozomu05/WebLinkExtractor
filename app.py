@@ -149,12 +149,20 @@ def main():
                 content = extract_complete_webpage_content(url_input)
                 
                 if not content or len(content.strip()) < 50:
-                    st.warning("Unable to extract meaningful content from this URL. The page might be:")
+                    st.warning("Unable to extract meaningful content from this URL.")
+                    st.info("**Possible reasons:**")
                     st.markdown("""
-                    - Protected by anti-bot measures
-                    - Requiring JavaScript to load content
-                    - Containing mostly images or videos
-                    - Behind a paywall or login
+                    - The website requires JavaScript to load content
+                    - Content is protected by anti-bot measures  
+                    - Page contains mostly images, videos, or interactive elements
+                    - Content is behind a paywall or login system
+                    - Website is temporarily unavailable
+                    """)
+                    st.markdown("**Try:**")
+                    st.markdown("""
+                    - A different URL from the same website
+                    - A news article or blog post URL
+                    - Checking if the URL loads properly in your browser
                     """)
                     return
                 
