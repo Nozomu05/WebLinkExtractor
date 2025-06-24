@@ -23,107 +23,92 @@ def is_valid_url(url):
 
 def display_formatted_content(content):
     """
-    Display content with clean, readable formatting
+    Display content with proper formatting and structure
     """
     if not content:
         st.warning("No content to display")
         return
     
-    # Split content into lines for processing
-    lines = content.split('\n')
+    # Clean up the content first
+    content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)  # Remove excessive line breaks
     
-    in_list = False
-    list_items = []
+    # Split content into sections
+    sections = content.split('\n\n')
     
-    for line in lines:
-        line = line.strip()
-        
-        # Skip completely empty lines
-        if not line:
-            # If we were building a list, display it
-            if in_list and list_items:
-                st.markdown("**List Items:**")
-                for item in list_items:
-                    st.markdown(f"• {item}")
-                st.markdown("")  # Add spacing
-                list_items = []
-                in_list = False
+    for section in sections:
+        section = section.strip()
+        if not section:
             continue
         
-        # Handle headings
-        if line.startswith('#'):
-            # Display any accumulated list first
-            if in_list and list_items:
-                st.markdown("**List Items:**")
-                for item in list_items:
-                    st.markdown(f"• {item}")
-                st.markdown("")
-                list_items = []
-                in_list = False
+        lines = section.split('\n')
+        
+        # Check if this section starts with a heading
+        first_line = lines[0].strip()
+        
+        if first_line.startswith('#'):
+            # This is a heading section
+            heading_level = len(first_line) - len(first_line.lstrip('#'))
+            heading_text = first_line.lstrip('# ').strip()
             
-            # Count heading level and display
-            heading_level = len(line) - len(line.lstrip('#'))
-            heading_text = line.lstrip('# ').strip()
-            
+            # Display heading
             if heading_level == 1:
                 st.header(heading_text)
             elif heading_level == 2:
                 st.subheader(heading_text)
-            elif heading_level == 3:
-                st.markdown(f"### {heading_text}")
             else:
                 st.markdown(f"{'#' * heading_level} {heading_text}")
-        
-        # Handle list items
-        elif line.startswith('•') or line.startswith('-') or line.startswith('*'):
-            list_item = line.lstrip('•-* ').strip()
-            if list_item:
-                list_items.append(list_item)
-                in_list = True
-        
-        # Handle table-like content
-        elif '|' in line and line.count('|') >= 2:
-            # Display any accumulated list first
-            if in_list and list_items:
-                st.markdown("**List Items:**")
-                for item in list_items:
-                    st.markdown(f"• {item}")
-                st.markdown("")
-                list_items = []
-                in_list = False
             
-            # Display table row
-            st.markdown(f"**{line}**")
+            # Display rest of section if any
+            if len(lines) > 1:
+                remaining_content = '\n'.join(lines[1:]).strip()
+                if remaining_content:
+                    st.markdown(remaining_content)
         
-        # Regular text content
-        else:
-            # Display any accumulated list first
-            if in_list and list_items:
-                st.markdown("**List Items:**")
-                for item in list_items:
-                    st.markdown(f"• {item}")
-                st.markdown("")
-                list_items = []
-                in_list = False
-            
-            # Display text block
-            if line and len(line.strip()) > 2:
-                # Add visual distinction for different content types
-                if len(line) > 200:  # Long paragraphs
-                    st.markdown(f"**Content:** {line}")
-                    st.markdown("")  # Add spacing
-                elif len(line) < 50:  # Short text
-                    st.info(line)
-                else:  # Regular paragraphs
+        elif any(line.strip().startswith('•') for line in lines):
+            # This is a list section
+            st.markdown("**List:**")
+            for line in lines:
+                line = line.strip()
+                if line.startswith('•'):
+                    st.markdown(f"  {line}")
+                elif line and not line.startswith('•'):
                     st.markdown(line)
-                    st.markdown("")  # Add spacing
-    
-    # Display any remaining list items
-    if in_list and list_items:
-        st.markdown("**List Items:**")
-        for item in list_items:
-            st.markdown(f"• {item}")
-        st.markdown("")
+        
+        elif any('|' in line and line.count('|') >= 2 for line in lines):
+            # This is a table section
+            st.markdown("**Table:**")
+            for line in lines:
+                if '|' in line and line.count('|') >= 2:
+                    st.markdown(f"`{line}`")
+                else:
+                    st.markdown(line)
+        
+        else:
+            # Regular content section
+            section_text = section.strip()
+            if len(section_text) > 0:
+                # Split very long sections into paragraphs
+                if len(section_text) > 500:
+                    # Try to split on sentence boundaries
+                    sentences = re.split(r'(?<=[.!?])\s+', section_text)
+                    current_paragraph = []
+                    
+                    for sentence in sentences:
+                        current_paragraph.append(sentence)
+                        # Group roughly 2-3 sentences per paragraph
+                        if len(current_paragraph) >= 3 or len(' '.join(current_paragraph)) > 300:
+                            st.markdown(' '.join(current_paragraph))
+                            st.markdown("")  # Add spacing
+                            current_paragraph = []
+                    
+                    # Display remaining sentences
+                    if current_paragraph:
+                        st.markdown(' '.join(current_paragraph))
+                        st.markdown("")
+                else:
+                    # Display as single paragraph
+                    st.markdown(section_text)
+                    st.markdown("")  # Add spacing between sections
 
 def main():
     # Enhanced title with gradient background

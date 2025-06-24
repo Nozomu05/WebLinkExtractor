@@ -45,83 +45,88 @@ def extract_complete_webpage_content(url: str) -> str:
         body = soup.find('body') or soup
         
         def extract_element_content(element, level=0):
-            """Recursively extract content preserving hierarchy and blocks"""
+            """Extract content with proper structure and formatting"""
             results = []
             
-            if element.name:
-                # Handle headings - always on new lines
-                if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
-                    text = element.get_text(strip=True)
-                    if text:
-                        heading_level = int(element.name[1])
-                        prefix = '#' * heading_level
-                        results.append(f"\n{prefix} {text}\n")
+            if not element.name:
+                return results
+            
+            # Handle headings with clear formatting
+            if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                text = element.get_text(strip=True)
+                if text and len(text) > 2:
+                    heading_level = int(element.name[1])
+                    prefix = '#' * heading_level
+                    results.append(f"\n{prefix} {text}\n")
+            
+            # Handle paragraphs as distinct blocks
+            elif element.name == 'p':
+                text = element.get_text(strip=True)
+                if text and len(text) > 10:
+                    results.append(f"{text}\n\n")
+            
+            # Handle list containers
+            elif element.name in ['ul', 'ol']:
+                list_items = []
+                for li in element.find_all('li', recursive=False):
+                    li_text = li.get_text(strip=True)
+                    if li_text and len(li_text) > 3:
+                        list_items.append(f"• {li_text}")
                 
-                # Handle paragraphs - each paragraph is a new block
-                elif element.name == 'p':
-                    text = element.get_text(strip=True)
-                    if text and len(text) > 5:
-                        results.append(f"{text}\n")
+                if list_items:
+                    results.extend(list_items)
+                    results.append("\n")
+            
+            # Handle table structure
+            elif element.name == 'table':
+                table_content = []
+                for row in element.find_all('tr'):
+                    cells = []
+                    for cell in row.find_all(['td', 'th']):
+                        cell_text = cell.get_text(strip=True)
+                        if cell_text:
+                            cells.append(cell_text)
+                    if cells:
+                        table_content.append(" | ".join(cells))
                 
-                # Handle divs - treat each div as potential new block
-                elif element.name == 'div':
-                    div_text = element.get_text(strip=True)
-                    if div_text and len(div_text) > 10:
-                        # Check if this div contains block elements
-                        has_block_children = any(child.name in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'section'] 
-                                               for child in element.children if hasattr(child, 'name'))
-                        
-                        if has_block_children:
-                            # Process children individually
-                            for child in element.children:
-                                if hasattr(child, 'name'):
-                                    child_results = extract_element_content(child, level + 1)
-                                    results.extend(child_results)
-                                elif isinstance(child, str):
-                                    text = child.strip()
-                                    if text and len(text) > 5 and not re.match(r'^[\s\n\r\t]*$', text):
-                                        results.append(f"{text}\n")
-                        else:
-                            # Treat entire div as one block
-                            results.append(f"{div_text}\n")
+                if table_content:
+                    results.extend(table_content)
+                    results.append("\n")
+            
+            # Handle block elements that should be separated
+            elif element.name in ['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav']:
+                # Check if this element has meaningful direct text
+                direct_text = []
+                for child in element.children:
+                    if isinstance(child, str):
+                        text = child.strip()
+                        if text and len(text) > 10:
+                            direct_text.append(text)
                 
-                # Handle lists - each list is a block
-                elif element.name in ['ul', 'ol']:
-                    for li in element.find_all('li', recursive=False):
-                        li_text = li.get_text(strip=True)
-                        if li_text:
-                            results.append(f"• {li_text}")
-                    results.append("")
-                
-                # Handle tables - each table is a block
-                elif element.name == 'table':
-                    for row in element.find_all('tr'):
-                        cells = [cell.get_text(strip=True) for cell in row.find_all(['td', 'th'])]
-                        if any(cells):
-                            results.append(" | ".join(cells))
-                    results.append("")
-                
-                # Handle sections and articles - treat as blocks
-                elif element.name in ['section', 'article', 'main', 'aside', 'header', 'footer']:
+                # If has direct text, treat as a block
+                if direct_text:
+                    combined_text = ' '.join(direct_text)
+                    if len(combined_text) > 15:
+                        results.append(f"{combined_text}\n\n")
+                else:
+                    # Process children recursively
                     for child in element.children:
                         if hasattr(child, 'name'):
                             child_results = extract_element_content(child, level + 1)
                             results.extend(child_results)
-                        elif isinstance(child, str):
-                            text = child.strip()
-                            if text and len(text) > 5 and not re.match(r'^[\s\n\r\t]*$', text):
-                                results.append(f"{text}\n")
-                
-                # Handle spans and other inline elements
-                elif element.name in ['span', 'strong', 'em', 'b', 'i', 'a']:
-                    text = element.get_text(strip=True)
-                    if text and len(text) > 5:
-                        results.append(text)
-                
-                # Handle other block elements
-                else:
-                    text = element.get_text(strip=True)
-                    if text and len(text) > 10:
+            
+            # Handle other text elements
+            elif element.name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code']:
+                text = element.get_text(strip=True)
+                if text and len(text) > 5:
+                    # Check if this is likely standalone content
+                    parent_has_text = False
+                    if element.parent:
+                        parent_text = element.parent.get_text(strip=True)
+                        if len(parent_text) > len(text) * 2:
+                            parent_has_text = True
+                    
+                    if not parent_has_text:
                         results.append(f"{text}\n")
             
             return results
