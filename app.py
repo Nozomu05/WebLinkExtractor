@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import re
 from urllib.parse import urlparse
-from complete_extractor import extract_complete_webpage_content
+from complete_data_extractor import extract_all_webpage_data
 
 # Configure the Streamlit page
 st.set_page_config(
@@ -145,8 +145,8 @@ def main():
         # Show loading state
         with st.spinner("Extracting content..."):
             try:
-                # Extract complete content from the webpage
-                content = extract_complete_webpage_content(url_input)
+                # Extract all data from the webpage
+                content = extract_all_webpage_data(url_input)
                 
                 if not content or len(content.strip()) < 50:
                     st.warning("Unable to extract meaningful content from this URL.")
