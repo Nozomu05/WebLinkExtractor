@@ -158,12 +158,23 @@ def main():
                     - Content is behind a paywall or login system
                     - Website is temporarily unavailable
                     """)
-                    st.markdown("**Try:**")
-                    st.markdown("""
-                    - A different URL from the same website
-                    - A news article or blog post URL
-                    - Checking if the URL loads properly in your browser
-                    """)
+                    st.markdown("**Try these alternatives:**")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("""
+                        **Different URLs:**
+                        - News articles (BBC, CNN, etc.)
+                        - Blog posts 
+                        - Wikipedia pages
+                        - Documentation sites
+                        """)
+                    with col2:
+                        st.markdown("""
+                        **Test URLs:**
+                        - https://en.wikipedia.org/wiki/Python_(programming_language)
+                        - https://www.bbc.com/news
+                        - https://medium.com/@username/article
+                        """)
                     return
                 
                 # Display results with enhanced styling

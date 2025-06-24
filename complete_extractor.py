@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 import re
+import trafilatura
 
 def extract_complete_webpage_content(url: str) -> str:
     """
@@ -67,12 +68,37 @@ def extract_complete_webpage_content(url: str) -> str:
             else:
                 raise Exception("Failed to fetch content with any user agent")
         
-        # Parse HTML with better parser
+        # Try trafilatura first as it's specifically designed for content extraction
+        trafilatura_content = trafilatura.extract(
+            response.text,
+            include_comments=False,
+            include_tables=True,
+            include_formatting=True,
+            favor_precision=False,
+            favor_recall=True,
+            include_links=False,
+            with_metadata=False,
+            no_fallback=False,
+            deduplicate=False
+        )
+        
+        # If trafilatura succeeds and gives good content, use it
+        if trafilatura_content and len(trafilatura_content.strip()) > 200:
+            # Clean and format trafilatura output
+            content = trafilatura_content.strip()
+            content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)
+            return content
+        
+        # Fall back to BeautifulSoup method
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Check if page seems to have meaningful content
         body_text = soup.get_text(strip=True) if soup.body else soup.get_text(strip=True)
         if len(body_text) < 100:
+            # Try one more approach - get all visible text
+            all_text = soup.get_text(separator=' ', strip=True)
+            if len(all_text) > 50:
+                return all_text
             raise Exception("Page appears to have minimal content - may require JavaScript or be behind protection")
         
         # Remove unwanted elements but preserve structure
@@ -194,8 +220,12 @@ def extract_complete_webpage_content(url: str) -> str:
         final_content = re.sub(r'\n\s*\n\s*\n+', '\n\n', final_content)
         final_content = re.sub(r'[ \t]+', ' ', final_content)
         
-        # Final validation
-        if len(final_content.strip()) < 100:
+        # Final validation - be more lenient
+        if len(final_content.strip()) < 50:
+            # Last resort - try to get any visible text
+            fallback_text = soup.get_text(separator=' ', strip=True)
+            if len(fallback_text) > 30:
+                return fallback_text
             raise Exception("Extracted content is too short - page may require JavaScript or special handling")
         
         return final_content.strip()
