@@ -23,7 +23,7 @@ def is_valid_url(url):
 
 def display_formatted_content(content):
     """
-    Display content in a well-formatted, readable way
+    Display content with each text block on a new line as it appears on the webpage
     """
     if not content:
         st.warning("No content to display")
@@ -32,24 +32,16 @@ def display_formatted_content(content):
     # Split content into lines for processing
     lines = content.split('\n')
     
-    current_section = []
     in_list = False
     list_items = []
     
     for line in lines:
         line = line.strip()
         
-        # Skip empty lines but add spacing
+        # Skip completely empty lines
         if not line:
-            if current_section:
-                # Display accumulated content
-                if current_section:
-                    paragraph_text = ' '.join(current_section).strip()
-                    if paragraph_text:
-                        st.markdown(paragraph_text)
-                    current_section = []
+            # If we were building a list, display it
             if in_list and list_items:
-                # Display accumulated list
                 for item in list_items:
                     st.markdown(f"• {item}")
                 list_items = []
@@ -58,12 +50,12 @@ def display_formatted_content(content):
         
         # Handle headings
         if line.startswith('#'):
-            # Display any accumulated content first
-            if current_section:
-                paragraph_text = ' '.join(current_section).strip()
-                if paragraph_text:
-                    st.markdown(paragraph_text)
-                current_section = []
+            # Display any accumulated list first
+            if in_list and list_items:
+                for item in list_items:
+                    st.markdown(f"• {item}")
+                list_items = []
+                in_list = False
             
             # Count heading level and display
             heading_level = len(line) - len(line.lstrip('#'))
@@ -80,14 +72,6 @@ def display_formatted_content(content):
         
         # Handle list items
         elif line.startswith('•') or line.startswith('-') or line.startswith('*'):
-            # Display any accumulated paragraph content
-            if current_section:
-                paragraph_text = ' '.join(current_section).strip()
-                if paragraph_text:
-                    st.markdown(paragraph_text)
-                current_section = []
-            
-            # Add to list
             list_item = line.lstrip('•-* ').strip()
             if list_item:
                 list_items.append(list_item)
@@ -95,35 +79,30 @@ def display_formatted_content(content):
         
         # Handle table-like content (with |)
         elif '|' in line and line.count('|') >= 2:
-            # Display any accumulated content
-            if current_section:
-                paragraph_text = ' '.join(current_section).strip()
-                if paragraph_text:
-                    st.markdown(paragraph_text)
-                current_section = []
-            
-            # Display table row
-            st.markdown(line)
-        
-        # Regular content
-        else:
-            # If we were in a list, display it first
+            # Display any accumulated list first
             if in_list and list_items:
                 for item in list_items:
                     st.markdown(f"• {item}")
                 list_items = []
                 in_list = False
             
-            # Add to current paragraph
-            if line:
-                current_section.append(line)
+            # Display table row
+            st.markdown(line)
+        
+        # Regular text content - each line is a separate block
+        else:
+            # Display any accumulated list first
+            if in_list and list_items:
+                for item in list_items:
+                    st.markdown(f"• {item}")
+                list_items = []
+                in_list = False
+            
+            # Display this text block on its own line
+            if line and len(line.strip()) > 2:
+                st.markdown(line)
     
-    # Display any remaining content
-    if current_section:
-        paragraph_text = ' '.join(current_section).strip()
-        if paragraph_text:
-            st.markdown(paragraph_text)
-    
+    # Display any remaining list items
     if in_list and list_items:
         for item in list_items:
             st.markdown(f"• {item}")
