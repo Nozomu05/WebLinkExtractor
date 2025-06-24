@@ -125,68 +125,110 @@ def extract_all_webpage_data(url: str) -> str:
                 if line and len(line) > 3:
                     extracted_text.add(line)
         
-        # 5. Extract specific elements with structure
-        structured_content = []
-        
-        # Headers
-        for i in range(1, 7):
-            headers = soup.find_all(f'h{i}')
-            for header in headers:
-                header_text = header.get_text(strip=True)
-                if header_text and len(header_text) > 2:
-                    structured_content.append(f"{'#' * i} {header_text}")
-        
-        # Paragraphs
-        paragraphs = soup.find_all('p')
-        for p in paragraphs:
-            p_text = p.get_text(strip=True)
-            if p_text and len(p_text) > 10:
-                structured_content.append(p_text)
-        
-        # Lists
-        lists = soup.find_all(['ul', 'ol'])
-        for lst in lists:
-            items = lst.find_all('li')
-            for item in items:
-                item_text = item.get_text(strip=True)
-                if item_text and len(item_text) > 3:
-                    structured_content.append(f"• {item_text}")
-        
-        # Tables
-        tables = soup.find_all('table')
-        for table in tables:
-            rows = table.find_all('tr')
-            for row in rows:
-                cells = [cell.get_text(strip=True) for cell in row.find_all(['td', 'th'])]
-                if any(cells):
-                    structured_content.append(" | ".join(filter(None, cells)))
-        
-        # Divs and other containers
-        divs = soup.find_all(['div', 'section', 'article', 'aside'])
-        for div in divs:
-            # Get direct text content
-            div_text = div.get_text(strip=True)
-            if div_text and len(div_text) > 15:
-                # Check if this div's text is not already captured by children
-                children_text = ""
-                for child in div.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']):
-                    children_text += child.get_text(strip=True)
+        # 5. Extract content preserving webpage structure and order
+        def extract_structured_content(element, level=0):
+            """Extract content maintaining webpage hierarchy and order"""
+            content_blocks = []
+            
+            if not element or not hasattr(element, 'children'):
+                return content_blocks
+            
+            for child in element.children:
+                if hasattr(child, 'name') and child.name:
+                    # Handle headings with proper hierarchy
+                    if child.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 2:
+                            heading_level = int(child.name[1])
+                            content_blocks.append(f"{'#' * heading_level} {text}\n")
+                    
+                    # Handle paragraphs as blocks
+                    elif child.name == 'p':
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 5:
+                            content_blocks.append(f"{text}\n")
+                    
+                    # Handle lists maintaining structure
+                    elif child.name in ['ul', 'ol']:
+                        list_items = []
+                        for li in child.find_all('li', recursive=False):
+                            li_text = li.get_text(strip=True)
+                            if li_text and len(li_text) > 2:
+                                list_items.append(f"• {li_text}")
+                        if list_items:
+                            content_blocks.extend(list_items)
+                            content_blocks.append("")  # Add spacing after list
+                    
+                    # Handle tables
+                    elif child.name == 'table':
+                        table_rows = []
+                        for row in child.find_all('tr'):
+                            cells = []
+                            for cell in row.find_all(['td', 'th']):
+                                cell_text = cell.get_text(strip=True)
+                                if cell_text:
+                                    cells.append(cell_text)
+                            if cells:
+                                table_rows.append(" | ".join(cells))
+                        if table_rows:
+                            content_blocks.extend(table_rows)
+                            content_blocks.append("")  # Add spacing after table
+                    
+                    # Handle block containers while preserving order
+                    elif child.name in ['div', 'section', 'article', 'main', 'aside', 'header', 'footer']:
+                        # Check if this container has direct text content
+                        direct_text = []
+                        for text_node in child.children:
+                            if isinstance(text_node, str):
+                                text = text_node.strip()
+                                if text and len(text) > 10:
+                                    direct_text.append(text)
+                        
+                        if direct_text:
+                            # Has direct text - treat as content block
+                            combined = ' '.join(direct_text)
+                            if len(combined) > 15:
+                                content_blocks.append(f"{combined}\n")
+                        else:
+                            # Recursively process children to maintain order
+                            child_content = extract_structured_content(child, level + 1)
+                            content_blocks.extend(child_content)
+                    
+                    # Handle other text elements
+                    elif child.name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code']:
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 5:
+                            # Check if this is standalone content
+                            parent = child.parent
+                            if parent and parent.name not in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                                content_blocks.append(f"{text}\n")
                 
-                # If the div has significantly more text than its children, include it
-                if len(div_text) > len(children_text) * 1.2:
-                    structured_content.append(div_text)
+                elif isinstance(child, str):
+                    # Direct text content
+                    text = child.strip()
+                    if text and len(text) > 10:
+                        content_blocks.append(f"{text}\n")
+            
+            return content_blocks
         
-        # Combine all extracted content
+        # Extract structured content from the main body
+        body = soup.body if soup.body else soup
+        structured_content = extract_structured_content(body)
+        
+        # Combine all content maintaining structure
         final_content = []
+        final_content.extend(all_content)  # Title and metadata first
+        final_content.extend(structured_content)  # Then structured content in order
         
-        # Add structured content first
-        final_content.extend(all_content)
-        final_content.extend(structured_content)
-        
-        # Add any remaining text that wasn't captured
-        for text in sorted(extracted_text, key=len, reverse=True):
-            if not any(text in existing for existing in final_content):
-                final_content.append(text)
+        # Add any missed content from trafilatura if it's not already included
+        if trafilatura_content:
+            trafilatura_lines = trafilatura_content.split('\n')
+            for line in trafilatura_lines:
+                line = line.strip()
+                if line and len(line) > 10:
+                    # Check if this content is not already captured
+                    if not any(line in existing for existing in final_content):
+                        final_content.append(line)
         
         # Join and clean up
         result = '\n\n'.join(filter(None, final_content))

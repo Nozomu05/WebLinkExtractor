@@ -84,29 +84,38 @@ def display_formatted_content(content):
                     st.markdown(line)
         
         else:
-            # Regular content section
+            # Regular content section - display as webpage structure
             section_text = section.strip()
             if len(section_text) > 0:
-                # Split very long sections into paragraphs
-                if len(section_text) > 500:
-                    # Try to split on sentence boundaries
-                    sentences = re.split(r'(?<=[.!?])\s+', section_text)
-                    current_paragraph = []
+                # Check if this looks like multiple sentences that should be separate blocks
+                if '. ' in section_text and len(section_text) > 200:
+                    # Split into natural blocks maintaining flow
+                    sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', section_text)
                     
+                    # Group sentences into logical blocks (like webpage paragraphs)
+                    current_block = []
                     for sentence in sentences:
-                        current_paragraph.append(sentence)
-                        # Group roughly 2-3 sentences per paragraph
-                        if len(current_paragraph) >= 3 or len(' '.join(current_paragraph)) > 300:
-                            st.markdown(' '.join(current_paragraph))
-                            st.markdown("")  # Add spacing
-                            current_paragraph = []
+                        current_block.append(sentence)
+                        
+                        # Create new block when we have 1-2 sentences or reach reasonable length
+                        if (len(current_block) >= 2 or 
+                            len(' '.join(current_block)) > 250 or
+                            sentence.endswith(('.', '!', '?')) and len(' '.join(current_block)) > 100):
+                            
+                            block_text = ' '.join(current_block).strip()
+                            if block_text:
+                                st.markdown(block_text)
+                                st.markdown("")  # Add spacing like webpage paragraphs
+                            current_block = []
                     
-                    # Display remaining sentences
-                    if current_paragraph:
-                        st.markdown(' '.join(current_paragraph))
-                        st.markdown("")
+                    # Display any remaining content
+                    if current_block:
+                        block_text = ' '.join(current_block).strip()
+                        if block_text:
+                            st.markdown(block_text)
+                            st.markdown("")
                 else:
-                    # Display as single paragraph
+                    # Display as single block maintaining webpage structure
                     st.markdown(section_text)
                     st.markdown("")  # Add spacing between sections
 
