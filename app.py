@@ -96,6 +96,53 @@ def display_formatted_content(content):
             st.markdown(f"**Answer:** {answer_text}")
             st.markdown("")
         
+        elif section.startswith('![') and '](' in section and section.endswith(')'):
+            # Handle images
+            try:
+                alt_start = section.find('[') + 1
+                alt_end = section.find(']')
+                url_start = section.find('(') + 1
+                url_end = section.find(')')
+                
+                alt_text = section[alt_start:alt_end]
+                image_url = section[url_start:url_end]
+                
+                if image_url:
+                    st.image(image_url, caption=alt_text if alt_text else None)
+            except:
+                st.markdown(section)
+        
+        elif section.startswith('**[') and section.endswith(']**'):
+            # Handle video/audio/embedded content
+            if 'VIDEO:' in section:
+                video_url = section.replace('**[VIDEO:', '').replace(']**', '').strip()
+                try:
+                    st.video(video_url)
+                except:
+                    st.markdown(f"**Video:** {video_url}")
+            elif 'AUDIO:' in section:
+                audio_url = section.replace('**[AUDIO:', '').replace(']**', '').strip()
+                try:
+                    st.audio(audio_url)
+                except:
+                    st.markdown(f"**Audio:** {audio_url}")
+            elif 'EMBEDDED VIDEO:' in section:
+                embed_url = section.replace('**[EMBEDDED VIDEO:', '').replace(']**', '').strip()
+                # Handle YouTube embeds
+                if 'youtube.com/watch' in embed_url:
+                    video_id = embed_url.split('v=')[1].split('&')[0]
+                    embed_url = f"https://www.youtube.com/embed/{video_id}"
+                elif 'youtu.be/' in embed_url:
+                    video_id = embed_url.split('youtu.be/')[1].split('?')[0]
+                    embed_url = f"https://www.youtube.com/embed/{video_id}"
+                
+                st.markdown(f'<iframe width="560" height="315" src="{embed_url}" frameborder="0" allowfullscreen></iframe>', unsafe_allow_html=True)
+            elif 'EMBEDDED CONTENT:' in section:
+                embed_url = section.replace('**[EMBEDDED CONTENT:', '').replace(']**', '').strip()
+                st.markdown(f"**Embedded Content:** {embed_url}")
+            else:
+                st.markdown(section)
+        
         elif section.startswith('**') and section.endswith('**'):
             # Other emphasized content
             emphasized_text = section[2:-2].strip()
@@ -149,10 +196,26 @@ def main():
         help="Enter a valid URL to extract and organize its content"
     )
     
-    # Extract button
-    extract_button = st.button("Extract Content", type="primary")
+    # Extraction tools section
+    st.subheader("Extraction Tools")
     
-    if extract_button:
+    col1, col2, col3 = st.columns(3)
+    
+    extract_type = None
+    
+    with col1:
+        if st.button("Extract Text Only", type="primary"):
+            extract_type = "text"
+    
+    with col2:
+        if st.button("Extract with Pictures"):
+            extract_type = "pictures"
+    
+    with col3:
+        if st.button("Extract with Videos"):
+            extract_type = "videos"
+    
+    if extract_type:
         if not url_input:
             st.error("Please enter a URL to extract content from.")
             return
