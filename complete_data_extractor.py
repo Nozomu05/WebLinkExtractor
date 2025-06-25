@@ -133,43 +133,56 @@ def extract_all_webpage_data(url: str) -> str:
                 if line and len(line) > 3:
                     extracted_text.add(line)
         
-        # 5. Extract content preserving webpage structure and order
-        def extract_structured_content(element, level=0):
-            """Extract content maintaining webpage hierarchy and order"""
-            content_blocks = []
+        # 5. Extract content in exact DOM order preserving webpage structure
+        def extract_in_dom_order(element, level=0):
+            """Extract content in exact DOM traversal order maintaining webpage structure"""
+            content_parts = []
             
-            if not element or not hasattr(element, 'children'):
-                return content_blocks
+            if not element:
+                return content_parts
             
-            for child in element.children:
+            # Process all child nodes in exact DOM order
+            for child in element.children if hasattr(element, 'children') else []:
                 if hasattr(child, 'name') and child.name:
-                    # Handle headings with proper hierarchy
-                    if child.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
-                        text = child.get_text(strip=True)
-                        if text and len(text) > 2:
-                            heading_level = int(child.name[1])
-                            content_blocks.append(f"{'#' * heading_level} {text}\n")
+                    element_name = child.name.lower()
                     
-                    # Handle paragraphs as blocks
-                    elif child.name == 'p':
-                        text = child.get_text(strip=True)
-                        if text and len(text) > 5:
-                            content_blocks.append(f"{text}\n")
+                    # Skip unwanted elements completely
+                    if element_name in ['script', 'style', 'nav', 'aside'] or \
+                       (child.get('class') and any(cls in str(child.get('class')).lower() 
+                                                  for cls in ['nav', 'navigation', 'sidebar', 'menu', 'ad', 'advertisement', 'social'])):
+                        continue
                     
-                    # Handle lists maintaining structure
-                    elif child.name in ['ul', 'ol']:
-                        list_items = []
+                    # Handle different elements in exact order they appear
+                    if element_name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 1:
+                            heading_level = int(element_name[1])
+                            content_parts.append(f"{'#' * heading_level} {text}")
+                    
+                    elif element_name == 'p':
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 3:
+                            content_parts.append(text)
+                    
+                    elif element_name in ['ul', 'ol']:
+                        # Process list items in order
                         for li in child.find_all('li', recursive=False):
                             li_text = li.get_text(strip=True)
-                            if li_text and len(li_text) > 2:
-                                list_items.append(f"• {li_text}")
-                        if list_items:
-                            content_blocks.extend(list_items)
-                            content_blocks.append("")  # Add spacing after list
+                            if li_text and len(li_text) > 1:
+                                content_parts.append(f"• {li_text}")
                     
-                    # Handle tables
-                    elif child.name == 'table':
-                        table_rows = []
+                    elif element_name == 'blockquote':
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 5:
+                            content_parts.append(f"> {text}")
+                    
+                    elif element_name == 'pre':
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 3:
+                            content_parts.append(f"```\n{text}\n```")
+                    
+                    elif element_name == 'table':
+                        # Process table rows in order
                         for row in child.find_all('tr'):
                             cells = []
                             for cell in row.find_all(['td', 'th']):
@@ -177,84 +190,74 @@ def extract_all_webpage_data(url: str) -> str:
                                 if cell_text:
                                     cells.append(cell_text)
                             if cells:
-                                table_rows.append(" | ".join(cells))
-                        if table_rows:
-                            content_blocks.extend(table_rows)
-                            content_blocks.append("")  # Add spacing after table
+                                content_parts.append(" | ".join(cells))
                     
-                    # Handle block containers while preserving order
-                    elif child.name in ['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav']:
-                        # Skip navigation and sidebar elements that don't contain main content
-                        if child.get('class') and any(cls in str(child.get('class')).lower() for cls in ['nav', 'sidebar', 'menu', 'ad', 'advertisement']):
-                            continue
-                            
-                        # Check if this container has direct meaningful text content
-                        direct_text = []
-                        for text_node in child.children:
-                            if isinstance(text_node, str):
-                                text = text_node.strip()
-                                if text and len(text) > 10:
-                                    direct_text.append(text)
+                    elif element_name == 'details':
+                        # Handle FAQ/accordion sections properly
+                        summary = child.find('summary')
+                        if summary:
+                            summary_text = summary.get_text(strip=True)
+                            if summary_text:
+                                content_parts.append(f"**{summary_text}**")
                         
-                        if direct_text:
-                            # Has direct text - treat as content block
-                            combined = ' '.join(direct_text)
-                            if len(combined) > 15:
-                                content_blocks.append(f"{combined}\n")
+                        # Get the details content
+                        details_content = extract_in_dom_order(child, level + 1)
+                        content_parts.extend(details_content)
+                    
+                    elif element_name in ['div', 'section', 'article', 'main', 'header', 'footer']:
+                        # For containers, check if they have meaningful direct text
+                        direct_text_nodes = []
+                        has_block_children = False
+                        
+                        for node in child.children:
+                            if isinstance(node, str):
+                                text = node.strip()
+                                if text and len(text) > 5:
+                                    direct_text_nodes.append(text)
+                            elif hasattr(node, 'name') and node.name in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'div', 'section']:
+                                has_block_children = True
+                        
+                        if direct_text_nodes and not has_block_children:
+                            # Container with direct text content
+                            combined_text = ' '.join(direct_text_nodes)
+                            if len(combined_text) > 10:
+                                content_parts.append(combined_text)
                         else:
-                            # Recursively process children to maintain webpage order
-                            child_content = extract_structured_content(child, level + 1)
-                            content_blocks.extend(child_content)
+                            # Recursively process children in DOM order
+                            child_content = extract_in_dom_order(child, level + 1)
+                            content_parts.extend(child_content)
                     
-                    # Handle blockquotes and quotes
-                    elif child.name == 'blockquote':
-                        text = child.get_text(strip=True)
-                        if text and len(text) > 10:
-                            content_blocks.append(f"> {text}\n")
-                    
-                    # Handle preformatted text and code blocks
-                    elif child.name == 'pre':
-                        text = child.get_text(strip=True)
-                        if text and len(text) > 5:
-                            content_blocks.append(f"```\n{text}\n```\n")
-                    
-                    # Handle other inline text elements only if they're standalone
-                    elif child.name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code', 'small']:
-                        text = child.get_text(strip=True)
-                        if text and len(text) > 5:
-                            # Check if this is standalone content not within a paragraph
-                            parent = child.parent
-                            if parent and parent.name not in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th']:
-                                content_blocks.append(f"{text}\n")
-                    
-                    # Handle line breaks
-                    elif child.name == 'br':
-                        content_blocks.append("")
+                    elif element_name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code', 'small']:
+                        # Only include if it's standalone (not inside paragraph)
+                        parent = child.parent
+                        if parent and parent.name not in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th']:
+                            text = child.get_text(strip=True)
+                            if text and len(text) > 3:
+                                content_parts.append(text)
                 
                 elif isinstance(child, str):
-                    # Direct text content
+                    # Direct text node
                     text = child.strip()
-                    if text and len(text) > 10:
-                        content_blocks.append(f"{text}\n")
+                    if text and len(text) > 8:
+                        content_parts.append(text)
             
-            return content_blocks
+            return content_parts
         
-        # Extract structured content from the main body
+        # Extract content in exact DOM order from main body
         body = soup.body if soup.body else soup
-        structured_content = extract_structured_content(body)
+        dom_ordered_content = extract_in_dom_order(body)
         
-        # Combine all content maintaining structure
+        # Combine title/metadata with DOM-ordered content
         final_content = []
         final_content.extend(all_content)  # Title and metadata first
-        final_content.extend(structured_content)  # Then structured content in order
+        final_content.extend(dom_ordered_content)  # Then content in exact webpage order
         
-        # Add any missed content from trafilatura if it's not already included
-        if trafilatura_content:
+        # Only add trafilatura content if we got very little from DOM extraction
+        if len(dom_ordered_content) < 5 and trafilatura_content:
             trafilatura_lines = trafilatura_content.split('\n')
             for line in trafilatura_lines:
                 line = line.strip()
                 if line and len(line) > 10:
-                    # Check if this content is not already captured
                     if not any(line in existing for existing in final_content):
                         final_content.append(line)
         

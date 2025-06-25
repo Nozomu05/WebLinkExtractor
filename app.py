@@ -66,58 +66,56 @@ def display_formatted_content(content):
         
         elif any(line.strip().startswith('•') for line in lines):
             # This is a list section
-            st.markdown("**List:**")
             for line in lines:
                 line = line.strip()
                 if line.startswith('•'):
-                    st.markdown(f"  {line}")
+                    st.markdown(f"- {line[1:].strip()}")
                 elif line and not line.startswith('•'):
                     st.markdown(line)
+            st.markdown("")
         
         elif any('|' in line and line.count('|') >= 2 for line in lines):
             # This is a table section
-            st.markdown("**Table:**")
             for line in lines:
                 if '|' in line and line.count('|') >= 2:
-                    st.markdown(f"`{line}`")
+                    cells = [cell.strip() for cell in line.split('|')]
+                    st.markdown(" | ".join(filter(None, cells)))
                 else:
                     st.markdown(line)
+            st.markdown("")
+        
+        elif section.startswith('**') and section.endswith('**'):
+            # FAQ questions or emphasized content
+            question_text = section[2:-2].strip()
+            st.markdown(f"**{question_text}**")
+            st.markdown("")
+        
+        elif section.startswith('>'):
+            # Blockquotes
+            quote_text = section[1:].strip()
+            st.markdown(f"> {quote_text}")
+            st.markdown("")
+        
+        elif section.startswith('```'):
+            # Code blocks
+            code_content = section.replace('```', '').strip()
+            st.code(code_content, language=None)
+            st.markdown("")
         
         else:
-            # Regular content section - display as webpage structure
+            # Regular paragraphs - display exactly as webpage
             section_text = section.strip()
             if len(section_text) > 0:
-                # Check if this looks like multiple sentences that should be separate blocks
-                if '. ' in section_text and len(section_text) > 200:
-                    # Split into natural blocks maintaining flow
-                    sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', section_text)
-                    
-                    # Group sentences into logical blocks (like webpage paragraphs)
-                    current_block = []
-                    for sentence in sentences:
-                        current_block.append(sentence)
-                        
-                        # Create new block when we have 1-2 sentences or reach reasonable length
-                        if (len(current_block) >= 2 or 
-                            len(' '.join(current_block)) > 250 or
-                            sentence.endswith(('.', '!', '?')) and len(' '.join(current_block)) > 100):
-                            
-                            block_text = ' '.join(current_block).strip()
-                            if block_text:
-                                st.markdown(block_text)
-                                st.markdown("")  # Add spacing like webpage paragraphs
-                            current_block = []
-                    
-                    # Display any remaining content
-                    if current_block:
-                        block_text = ' '.join(current_block).strip()
-                        if block_text:
-                            st.markdown(block_text)
-                            st.markdown("")
+                if '\n' in section_text:
+                    lines = section_text.split('\n')
+                    for line in lines:
+                        line = line.strip()
+                        if line:
+                            st.markdown(line)
+                    st.markdown("")
                 else:
-                    # Display as single block maintaining webpage structure
                     st.markdown(section_text)
-                    st.markdown("")  # Add spacing between sections
+                    st.markdown("")
 
 def main():
     # Enhanced title with gradient background
