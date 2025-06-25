@@ -110,9 +110,16 @@ def extract_all_webpage_data(url: str, include_images: bool = False, include_vid
         
         # Extract videos if requested
         if include_videos:
-            for video in soup.find_all(['video', 'iframe']):
+            video_elements = soup.find_all(['video', 'iframe', 'embed', 'object'])
+            for video in video_elements:
                 if video.name == 'video':
-                    src = video.get('src', '')
+                    # Check for src attribute or source child elements
+                    src = video.get('src')
+                    if not src:
+                        source = video.find('source')
+                        if source:
+                            src = source.get('src')
+                    
                     if src:
                         # Convert relative URLs to absolute
                         if src.startswith('//'):
@@ -123,12 +130,41 @@ def extract_all_webpage_data(url: str, include_images: bool = False, include_vid
                         elif not src.startswith('http'):
                             from urllib.parse import urljoin
                             src = urljoin(url, src)
-                        media_content.append(f"**[VIDEO: {src}]**")
+                        
+                        poster = video.get('poster', '')
+                        title = video.get('title', 'Video')
+                        media_content.append(f"**[VIDEO: {title}]**\nURL: {src}")
+                        if poster:
+                            media_content.append(f"Poster: {poster}")
                 
                 elif video.name == 'iframe':
                     src = video.get('src', '')
-                    if src and ('youtube' in src or 'vimeo' in src or 'video' in src.lower()):
-                        media_content.append(f"**[EMBEDDED VIDEO: {src}]**")
+                    if src:
+                        # Convert relative URLs to absolute
+                        if src.startswith('//'):
+                            src = 'https:' + src
+                        elif src.startswith('/'):
+                            from urllib.parse import urljoin
+                            src = urljoin(url, src)
+                        
+                        title = video.get('title', 'Embedded Content')
+                        # Check if it's a known video platform
+                        if any(domain in src for domain in ['youtube.com', 'youtu.be', 'vimeo.com', 'dailymotion.com', 'twitch.tv', 'facebook.com/plugins/video']):
+                            media_content.append(f"**[EMBEDDED VIDEO: {title}]**\nURL: {src}")
+                        else:
+                            media_content.append(f"**[IFRAME: {title}]**\nURL: {src}")
+                
+                elif video.name in ['embed', 'object']:
+                    src = video.get('src') or video.get('data', '')
+                    if src:
+                        # Convert relative URLs to absolute  
+                        if src.startswith('//'):
+                            src = 'https:' + src
+                        elif src.startswith('/'):
+                            from urllib.parse import urljoin
+                            src = urljoin(url, src)
+                        
+                        media_content.append(f"**[EMBEDDED MEDIA]**\nURL: {src}")
         
         # Now remove unwanted elements
         elements_to_remove = ['script', 'style']
@@ -426,6 +462,8 @@ def extract_all_webpage_data(url: str, include_images: bool = False, include_vid
         final_content = []
         final_content.extend(all_content)  # Title and metadata first
         final_content.extend(complete_content)  # Then ALL content in exact webpage order
+        
+
         
         # Add media content at the end
         if media_content:
