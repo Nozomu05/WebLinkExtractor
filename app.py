@@ -50,6 +50,10 @@ def display_content_with_tabs(content, include_pictures, include_videos):
     if include_videos:
         tab_names.append("Videos")
     
+    # Debug information
+    st.write(f"Debug: Tab names = {tab_names}")
+    st.write(f"Debug: Text sections = {len(text_content)}, Image sections = {len(image_content)}, Video sections = {len(video_content)}")
+    
     if len(tab_names) == 1:
         # Only text content, display normally
         display_formatted_content('\n\n'.join(text_content))
