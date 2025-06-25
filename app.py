@@ -84,10 +84,22 @@ def display_formatted_content(content):
                     st.markdown(line)
             st.markdown("")
         
+        elif section.startswith('**Q:') and section.endswith('**'):
+            # FAQ questions
+            question_text = section[4:-2].strip()
+            st.markdown(f"### Q: {question_text}")
+            st.markdown("")
+        
+        elif section.startswith('**A:**'):
+            # FAQ answers
+            answer_text = section[6:].strip()
+            st.markdown(f"**Answer:** {answer_text}")
+            st.markdown("")
+        
         elif section.startswith('**') and section.endswith('**'):
-            # FAQ questions or emphasized content
-            question_text = section[2:-2].strip()
-            st.markdown(f"**{question_text}**")
+            # Other emphasized content
+            emphasized_text = section[2:-2].strip()
+            st.markdown(f"**{emphasized_text}**")
             st.markdown("")
         
         elif section.startswith('>'):

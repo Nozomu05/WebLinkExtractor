@@ -177,9 +177,87 @@ def extract_all_webpage_data(url: str) -> str:
                         content_parts.extend(details_content)
                     
                     elif element_name in ['div', 'section', 'article', 'main', 'header', 'footer', 'aside', 'nav']:
-                        # Process ALL containers - don't skip any content
-                        child_content = extract_complete_dom_content(child, level + 1, max_level)
-                        content_parts.extend(child_content)
+                        # Special handling for FAQ sections
+                        if (child.get('class') and 
+                            any('faq' in str(cls).lower() for cls in child.get('class', []))):
+                            
+                            # Process FAQ section with proper Q&A pairing
+                            content_parts.append("## FAQ Section")
+                            
+                            # Find all accordion items in the FAQ section
+                            accordion_items = child.find_all(['div'], 
+                                                           class_=lambda x: x and 'accordion-item' in str(x).lower())
+                            
+                            # First, find FAQ tab sections
+                            tab_panes = child.find_all(['div'], class_=lambda x: x and 'tab-pane' in str(x).lower())
+                            
+                            if tab_panes:
+                                for tab_idx, tab_pane in enumerate(tab_panes):
+                                    # Get tab section title from corresponding nav button
+                                    tab_id = tab_pane.get('id', '')
+                                    if tab_id:
+                                        tab_btn = soup.find(['button', 'a'], attrs={'data-bs-target': f'#{tab_id}'})
+                                        if not tab_btn:
+                                            tab_btn = soup.find(['button', 'a'], attrs={'href': f'#{tab_id}'})
+                                        
+                                        if tab_btn:
+                                            section_title = tab_btn.get_text(strip=True)
+                                            content_parts.append(f"### {section_title}")
+                                            content_parts.append("")
+                                    
+                                    # Find accordion items within this tab
+                                    tab_accordion_items = tab_pane.find_all(['div'], 
+                                                                          class_=lambda x: x and 'accordion-item' in str(x).lower())
+                                    
+                                    for item in tab_accordion_items:
+                                        # Find question button
+                                        question_btn = item.find(['button'], 
+                                                               class_=lambda x: x and 'accordion-button' in str(x).lower())
+                                        if question_btn:
+                                            question_text = question_btn.get_text(strip=True)
+                                            if question_text:
+                                                # Clean up question (remove number prefix if exists)
+                                                import re
+                                                clean_question = re.sub(r'^\d+\s*', '', question_text)
+                                                content_parts.append(f"**Q: {clean_question}**")
+                                        
+                                        # Find answer content
+                                        answer_div = item.find(['div'], 
+                                                             class_=lambda x: x and ('accordion-collapse' in str(x).lower() or 'collapse' in str(x).lower()))
+                                        if answer_div:
+                                            answer_text = answer_div.get_text(strip=True)
+                                            if answer_text:
+                                                content_parts.append(f"**A:** {answer_text}")
+                                        
+                                        content_parts.append("")  # Spacing between Q&A pairs
+                            
+                            elif accordion_items:
+                                # Process accordion structure without tabs
+                                for item in accordion_items:
+                                    # Find question button
+                                    question_btn = item.find(['button'], 
+                                                           class_=lambda x: x and 'accordion-button' in str(x).lower())
+                                    if question_btn:
+                                        question_text = question_btn.get_text(strip=True)
+                                        if question_text:
+                                            # Clean up question (remove number prefix)
+                                            import re
+                                            clean_question = re.sub(r'^\d+\s*', '', question_text)
+                                            content_parts.append(f"**Q: {clean_question}**")
+                                    
+                                    # Find answer content
+                                    answer_div = item.find(['div'], 
+                                                         class_=lambda x: x and ('accordion-collapse' in str(x).lower() or 'collapse' in str(x).lower()))
+                                    if answer_div:
+                                        answer_text = answer_div.get_text(strip=True)
+                                        if answer_text:
+                                            content_parts.append(f"**A:** {answer_text}")
+                                    
+                                    content_parts.append("")  # Spacing between Q&A pairs
+                        else:
+                            # Process other containers normally
+                            child_content = extract_complete_dom_content(child, level + 1, max_level)
+                            content_parts.extend(child_content)
                     
                     elif element_name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code', 'small', 'label', 'button']:
                         # Include standalone text elements
