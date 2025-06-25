@@ -1,65 +1,71 @@
 # URL Content Extractor
 
-A Streamlit web application that extracts and organizes webpage content into logical topic groups. The application scrapes web content from user-provided URLs, processes the text using natural language processing techniques, and presents organized content through an intuitive web interface.
+A powerful web application built with Streamlit that extracts and organizes webpage content while preserving the original structure and hierarchy. The application supports text extraction, image extraction, and video extraction with an intuitive tabbed interface.
 
 ## Features
 
-- **Web Content Extraction**: Uses Trafilatura for robust content extraction from any URL
-- **Structured Output**: Preserves original webpage hierarchy and organization
-- **FAQ Processing**: Special handling for FAQ sections with proper question-answer pairing
-- **Media Filtering**: Automatically removes images, videos, and other media content
-- **Vietnamese Support**: Full support for Vietnamese text processing and display
-- **Real-time Processing**: Live extraction and display of webpage content
+- **Text Content Extraction**: Clean text extraction while preserving webpage structure and hierarchy
+- **Image Extraction**: Extract and display all images from webpages in a dedicated Pictures tab
+- **Video Extraction**: Detect and extract HTML5 videos, embedded content, and iframes in a Videos tab
+- **Tabbed Interface**: Organized display with separate tabs for Text, Pictures, and Videos
+- **FAQ Support**: Specialized extraction and formatting for FAQ sections
+- **Export Options**: Download extracted content as Markdown or plain text
+- **Responsive Design**: Clean, modern interface with gradient backgrounds and metrics display
 
-## System Requirements
+## Technology Stack
 
-- Linux server (Ubuntu 18.04+ recommended)
-- Python 3.8 or higher
-- 2GB RAM minimum
-- Internet connection for content extraction
+- **Backend**: Python 3.11
+- **Web Framework**: Streamlit 1.46.0+
+- **Content Extraction**: Trafilatura 2.0.0+, BeautifulSoup4
+- **Text Processing**: NLTK 3.9.1+
+- **HTTP Requests**: Requests 2.32.4+
+- **Deployment**: Linux server with Nginx (optional) and systemd
 
-## Installation
+## Quick Start
 
-### 1. System Dependencies
+### Prerequisites
 
+- Linux server (Ubuntu 20.04+ or CentOS 8+ recommended)
+- Python 3.11 or higher
+- 2GB RAM minimum, 4GB recommended
+- 10GB disk space
+
+### Installation
+
+1. **Clone the repository**
 ```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
-
-# Install Python and pip
-sudo apt install python3 python3-pip python3-venv -y
-
-# Install system dependencies for web scraping
-sudo apt install curl wget git -y
+git clone <repository-url>
+cd url-content-extractor
 ```
 
-### 2. Clone and Setup Project
-
+2. **Install Python dependencies**
 ```bash
-# Clone the repository
-git clone <your-repository-url>
-cd url-content-extractor
+# Install Python 3.11 if not available
+sudo apt update
+sudo apt install python3.11 python3.11-pip python3.11-venv
 
 # Create virtual environment
-python3 -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate
 
-# Install Python dependencies
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Required Python Packages
-
-If `requirements.txt` doesn't exist, install packages manually:
-
+3. **Create requirements.txt** (if not present)
 ```bash
-pip install streamlit beautifulsoup4 nltk requests trafilatura
+cat > requirements.txt << EOF
+streamlit>=1.46.0
+trafilatura>=2.0.0
+beautifulsoup4>=4.12.0
+nltk>=3.9.1
+requests>=2.32.4
+EOF
 ```
 
-### 4. Download NLTK Data
-
+4. **Download NLTK data**
 ```bash
-python3 -c "
+python -c "
 import nltk
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -67,93 +73,145 @@ nltk.download('averaged_perceptron_tagger')
 "
 ```
 
-## Configuration
+5. **Test the application**
+```bash
+streamlit run app.py --server.port 8501
+```
 
-### 1. Streamlit Configuration
+## Production Deployment
 
-The application includes a `.streamlit/config.toml` file with optimal server settings:
+### Method 1: Systemd Service (Recommended)
 
-```toml
+1. **Create application user**
+```bash
+sudo useradd -r -s /bin/false -d /opt/url-extractor streamlit-app
+sudo mkdir -p /opt/url-extractor
+sudo chown streamlit-app:streamlit-app /opt/url-extractor
+```
+
+2. **Install application**
+```bash
+# Copy files to production directory
+sudo cp -r . /opt/url-extractor/
+sudo chown -R streamlit-app:streamlit-app /opt/url-extractor
+
+# Create virtual environment in production
+sudo -u streamlit-app python3.11 -m venv /opt/url-extractor/venv
+sudo -u streamlit-app /opt/url-extractor/venv/bin/pip install -r /opt/url-extractor/requirements.txt
+
+# Download NLTK data for production user
+sudo -u streamlit-app /opt/url-extractor/venv/bin/python -c "
+import nltk
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('averaged_perceptron_tagger')
+"
+```
+
+3. **Create Streamlit configuration**
+```bash
+sudo mkdir -p /opt/url-extractor/.streamlit
+sudo tee /opt/url-extractor/.streamlit/config.toml << EOF
 [server]
 headless = true
 address = "0.0.0.0"
-port = 5000
+port = 8501
+enableCORS = false
+enableXsrfProtection = false
+
+[theme]
+base = "light"
+EOF
+
+sudo chown -R streamlit-app:streamlit-app /opt/url-extractor/.streamlit
 ```
 
-### 2. Environment Variables (Optional)
-
+4. **Create systemd service**
 ```bash
-# Set environment variables for production
-export STREAMLIT_SERVER_PORT=5000
-export STREAMLIT_SERVER_ADDRESS="0.0.0.0"
-export STREAMLIT_SERVER_HEADLESS=true
-```
-
-## Deployment Options
-
-### Option 1: Direct Python Execution
-
-```bash
-# Navigate to project directory
-cd /path/to/url-content-extractor
-
-# Activate virtual environment
-source venv/bin/activate
-
-# Run the application
-streamlit run app.py --server.port 5000 --server.address 0.0.0.0
-```
-
-### Option 2: systemd Service (Recommended)
-
-Create a systemd service for automatic startup and management:
-
-```bash
-# Create service file
-sudo nano /etc/systemd/system/url-extractor.service
-```
-
-Add the following content:
-
-```ini
+sudo tee /etc/systemd/system/url-extractor.service << EOF
 [Unit]
-Description=URL Content Extractor
+Description=URL Content Extractor Streamlit App
 After=network.target
 
 [Service]
-Type=simple
-User=www-data
-WorkingDirectory=/path/to/url-content-extractor
-Environment=PATH=/path/to/url-content-extractor/venv/bin
-ExecStart=/path/to/url-content-extractor/venv/bin/streamlit run app.py --server.port 5000 --server.address 0.0.0.0
+Type=exec
+User=streamlit-app
+Group=streamlit-app
+WorkingDirectory=/opt/url-extractor
+Environment=PATH=/opt/url-extractor/venv/bin
+ExecStart=/opt/url-extractor/venv/bin/streamlit run app.py --server.port 8501 --server.address 0.0.0.0
 Restart=always
+RestartSec=3
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/url-extractor
+ProtectHome=true
 
 [Install]
 WantedBy=multi-user.target
+EOF
 ```
 
-Enable and start the service:
-
+5. **Start and enable service**
 ```bash
-# Reload systemd
 sudo systemctl daemon-reload
-
-# Enable service
 sudo systemctl enable url-extractor
-
-# Start service
 sudo systemctl start url-extractor
-
-# Check status
 sudo systemctl status url-extractor
 ```
 
-### Option 3: Docker Deployment
+### Method 2: Nginx Reverse Proxy (Optional)
 
-Create a `Dockerfile`:
+1. **Install Nginx**
+```bash
+sudo apt update
+sudo apt install nginx
+```
 
-```dockerfile
-FROM python:3.9-slim
+2. **Configure Nginx**
+```bash
+sudo tee /etc/nginx/sites-available/url-extractor << EOF
+server {
+    listen 80;
+    server_name your-domain.com;  # Replace with your domain or IP
+
+    location / {
+        proxy_pass http://127.0.0.1:8501;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400;
+    }
+}
+EOF
+
+# Enable site
+sudo ln -s /etc/nginx/sites-available/url-extractor /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+3. **Configure firewall**
+```bash
+sudo ufw allow 'Nginx Full'
+sudo ufw allow OpenSSH
+sudo ufw enable
+```
+
+### Method 3: Docker Deployment
+
+1. **Create Dockerfile**
+```bash
+cat > Dockerfile << EOF
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -172,214 +230,181 @@ RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); 
 # Copy application files
 COPY . .
 
+# Create Streamlit config
+RUN mkdir -p .streamlit
+COPY .streamlit/config.toml .streamlit/
+
 # Expose port
-EXPOSE 5000
+EXPOSE 8501
+
+# Health check
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
 # Run application
-CMD ["streamlit", "run", "app.py", "--server.port", "5000", "--server.address", "0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+EOF
 ```
 
-Build and run:
-
+2. **Build and run Docker container**
 ```bash
 # Build image
 docker build -t url-extractor .
 
 # Run container
-docker run -d -p 5000:5000 --name url-extractor url-extractor
+docker run -d \
+  --name url-extractor \
+  --restart unless-stopped \
+  -p 8501:8501 \
+  url-extractor
+
+# Check logs
+docker logs url-extractor
 ```
 
-## Reverse Proxy Setup (Nginx)
+## SSL/HTTPS Setup (Recommended for Production)
 
-For production deployment, use Nginx as a reverse proxy:
-
-```bash
-# Install Nginx
-sudo apt install nginx -y
-
-# Create site configuration
-sudo nano /etc/nginx/sites-available/url-extractor
-```
-
-Add configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # WebSocket support for Streamlit
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-Enable the site:
-
-```bash
-# Enable site
-sudo ln -s /etc/nginx/sites-available/url-extractor /etc/nginx/sites-enabled/
-
-# Test configuration
-sudo nginx -t
-
-# Restart Nginx
-sudo systemctl restart nginx
-```
-
-## SSL Certificate (Optional)
-
-Install SSL certificate using Let's Encrypt:
+### Using Certbot (Let's Encrypt)
 
 ```bash
 # Install Certbot
-sudo apt install certbot python3-certbot-nginx -y
+sudo apt install certbot python3-certbot-nginx
 
-# Get certificate
+# Get SSL certificate
 sudo certbot --nginx -d your-domain.com
+
+# Verify auto-renewal
+sudo certbot renew --dry-run
 ```
 
-## Firewall Configuration
+## Monitoring and Maintenance
 
+### View Application Logs
 ```bash
-# Allow HTTP and HTTPS
-sudo ufw allow 80
-sudo ufw allow 443
-
-# Allow SSH (if needed)
-sudo ufw allow 22
-
-# Enable firewall
-sudo ufw enable
-```
-
-## Monitoring and Logs
-
-### Check Application Logs
-
-```bash
-# systemd service logs
+# Systemd service logs
 sudo journalctl -u url-extractor -f
 
-# Docker logs
-docker logs -f url-extractor
+# Application-specific logs
+sudo tail -f /opt/url-extractor/logs/app.log
 ```
 
-### Monitor System Resources
-
+### Performance Monitoring
 ```bash
-# Check memory usage
-free -h
-
-# Check disk usage
+# Check system resources
+htop
 df -h
+free -m
 
-# Check running processes
-ps aux | grep streamlit
+# Check service status
+sudo systemctl status url-extractor nginx
+```
+
+### Backup Strategy
+```bash
+# Create backup script
+sudo tee /opt/backup-url-extractor.sh << EOF
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+tar -czf /backup/url-extractor-\$DATE.tar.gz /opt/url-extractor
+find /backup -name "url-extractor-*.tar.gz" -mtime +7 -delete
+EOF
+
+sudo chmod +x /opt/backup-url-extractor.sh
+
+# Add to crontab for daily backups
+echo "0 2 * * * /opt/backup-url-extractor.sh" | sudo crontab -
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Port Already in Use**
-   ```bash
-   # Check what's using port 5000
-   sudo lsof -i :5000
-   
-   # Kill process if needed
-   sudo kill -9 <PID>
-   ```
-
-2. **Permission Denied**
-   ```bash
-   # Fix file permissions
-   sudo chown -R www-data:www-data /path/to/url-content-extractor
-   ```
-
-3. **NLTK Data Missing**
-   ```bash
-   # Re-download NLTK data
-   python3 -c "import nltk; nltk.download('all')"
-   ```
-
-4. **Memory Issues**
-   ```bash
-   # Add swap space
-   sudo fallocate -l 2G /swapfile
-   sudo chmod 600 /swapfile
-   sudo mkswap /swapfile
-   sudo swapon /swapfile
-   ```
-
-### Performance Optimization
-
-1. **Increase worker processes** (for high traffic):
-   ```bash
-   # Edit systemd service to use multiple workers
-   ExecStart=/path/to/venv/bin/streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.maxUploadSize 200
-   ```
-
-2. **Enable caching**:
-   Add to `.streamlit/config.toml`:
-   ```toml
-   [global]
-   developmentMode = false
-   
-   [server]
-   enableCORS = false
-   enableXsrfProtection = true
-   ```
-
-## Maintenance
-
-### Regular Updates
-
+1. **Service won't start**
 ```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
+sudo journalctl -u url-extractor --no-pager
+sudo systemctl status url-extractor
+```
 
-# Update Python packages
-source venv/bin/activate
-pip install --upgrade -r requirements.txt
+2. **Permission denied errors**
+```bash
+sudo chown -R streamlit-app:streamlit-app /opt/url-extractor
+sudo chmod +x /opt/url-extractor/app.py
+```
 
-# Restart service
+3. **NLTK data missing**
+```bash
+sudo -u streamlit-app /opt/url-extractor/venv/bin/python -c "
+import nltk
+nltk.download('punkt', force=True)
+nltk.download('stopwords', force=True)
+nltk.download('averaged_perceptron_tagger', force=True)
+"
+```
+
+4. **Memory issues**
+```bash
+# Check memory usage
+free -m
+# Restart service if needed
 sudo systemctl restart url-extractor
 ```
 
-### Backup
+### Log Locations
+- **Application logs**: `sudo journalctl -u url-extractor`
+- **Nginx logs**: `/var/log/nginx/access.log` and `/var/log/nginx/error.log`
+- **System logs**: `/var/log/syslog`
 
+## Configuration
+
+### Environment Variables
 ```bash
-# Backup application files
-tar -czf url-extractor-backup-$(date +%Y%m%d).tar.gz /path/to/url-content-extractor
+# Optional: Set in /opt/url-extractor/.env
+STREAMLIT_SERVER_PORT=8501
+STREAMLIT_SERVER_ADDRESS=0.0.0.0
+STREAMLIT_SERVER_HEADLESS=true
+```
+
+### Streamlit Configuration
+Edit `/opt/url-extractor/.streamlit/config.toml`:
+```toml
+[server]
+headless = true
+address = "0.0.0.0"
+port = 8501
+maxUploadSize = 200
+
+[theme]
+base = "light"
+primaryColor = "#ff6b6b"
 ```
 
 ## Security Considerations
 
-1. **Run as non-root user**
-2. **Keep dependencies updated**
-3. **Use HTTPS in production**
-4. **Configure proper firewall rules**
-5. **Regular security updates**
-6. **Monitor application logs**
+1. **Firewall Configuration**
+```bash
+sudo ufw deny 8501  # Block direct access to Streamlit
+sudo ufw allow 'Nginx Full'
+```
+
+2. **Regular Updates**
+```bash
+sudo apt update && sudo apt upgrade
+pip install --upgrade -r requirements.txt
+```
+
+3. **Log Monitoring**
+```bash
+# Monitor for suspicious activity
+sudo tail -f /var/log/nginx/access.log | grep -E "(POST|PUT|DELETE)"
+```
 
 ## Support
 
-For issues or questions:
-1. Check the troubleshooting section
-2. Review application logs
-3. Ensure all dependencies are installed
-4. Verify network connectivity for web scraping
+For issues and questions:
+- Check the troubleshooting section above
+- Review application logs
+- Ensure all dependencies are properly installed
+- Verify network connectivity and firewall settings
 
 ## License
 
-This project is provided as-is for educational and development purposes.
+This project is open source. Please check the license file for details.
