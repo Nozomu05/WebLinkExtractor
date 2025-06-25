@@ -114,11 +114,25 @@ def extract_all_webpage_data(url: str, include_images: bool = False, include_vid
             for video in video_elements:
                 if video.name == 'video':
                     # Check for src attribute or source child elements
-                    src = video.get('src')
+                    src = video.get('src') or video.get('data-src') or video.get('data-video-src')
                     if not src:
                         source = video.find('source')
                         if source:
-                            src = source.get('src')
+                            src = source.get('src') or source.get('data-src')
+                    
+                    # If still no src, check for data attributes that might contain video info
+                    if not src:
+                        for attr in video.attrs:
+                            if 'video' in attr.lower() or 'src' in attr.lower():
+                                if video.get(attr) and ('http' in str(video.get(attr)) or video.get(attr).startswith('/')):
+                                    src = video.get(attr)
+                                    break
+                    
+                    # If we have video element but no source, still record it
+                    if not src:
+                        # Check if it has any identifying attributes
+                        video_id = video.get('id') or video.get('class', [''])[0] if video.get('class') else 'Unknown'
+                        media_content.append(f"**[VIDEO ELEMENT: {video_id}]**\nDynamic content (loaded with JavaScript)")
                     
                     if src:
                         # Convert relative URLs to absolute
@@ -138,8 +152,8 @@ def extract_all_webpage_data(url: str, include_images: bool = False, include_vid
                             media_content.append(f"Poster: {poster}")
                 
                 elif video.name == 'iframe':
-                    src = video.get('src', '')
-                    if src:
+                    src = video.get('src') or video.get('data-src') or video.get('data-lazy-src')
+                    if src and src != 'about:blank':
                         # Convert relative URLs to absolute
                         if src.startswith('//'):
                             src = 'https:' + src

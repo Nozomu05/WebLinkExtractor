@@ -500,8 +500,15 @@ def main():
                                 st.info("No videos or audio found on this webpage.")
                                 st.write("This could be because:")
                                 st.markdown("- The webpage doesn't contain video/audio content")
+                                st.markdown("- Videos are loaded dynamically with JavaScript")
                                 st.markdown("- Media is embedded in unsupported formats")
-                                st.markdown("- Media requires JavaScript to load")
+                                st.markdown("- The website blocks automated content extraction")
+                                st.markdown("- Videos require user interaction to load")
+                                
+                                st.write("**Try these alternatives:**")
+                                st.markdown("- Educational sites (Khan Academy, Coursera)")
+                                st.markdown("- Documentation with embedded videos")
+                                st.markdown("- News sites with accessible video content")
                 else:
                     # Only text content, display normally
                     display_formatted_content('\n\n'.join(text_content))
