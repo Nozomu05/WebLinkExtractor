@@ -422,8 +422,80 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Display content with improved formatting
-                display_formatted_content(content)
+                # Separate content types for tab display
+                text_content = []
+                image_content = []
+                video_content = []
+                
+                sections = content.split('\n\n')
+                
+                for section in sections:
+                    section = section.strip()
+                    if not section:
+                        continue
+                        
+                    # Check content type
+                    if section.startswith('![') and '](' in section and section.endswith(')'):
+                        image_content.append(section)
+                    elif section.startswith('**[') and ('VIDEO:' in section or 'AUDIO:' in section or 'EMBEDDED' in section):
+                        video_content.append(section)
+                    else:
+                        text_content.append(section)
+                
+                # Create tabs based on selected options
+                tab_names = ["Text Content"]
+                if extract_pictures:
+                    tab_names.append("Pictures")
+                if extract_videos:
+                    tab_names.append("Videos")
+                
+                # Always create tabs if any media extraction is enabled
+                if extract_pictures or extract_videos:
+                    # Create tabs
+                    tabs = st.tabs(tab_names)
+                    
+                    # Text content tab
+                    with tabs[0]:
+                        display_formatted_content('\n\n'.join(text_content))
+                    
+                    # Pictures tab
+                    tab_index = 1
+                    if extract_pictures:
+                        with tabs[tab_index]:
+                            st.subheader("Extracted Images")
+                            if image_content:
+                                st.write(f"Found {len(image_content)} images:")
+                                for i, img_section in enumerate(image_content, 1):
+                                    st.write(f"**Image {i}:**")
+                                    display_image_content(img_section)
+                                    st.write("---")
+                            else:
+                                st.info("No images found on this webpage.")
+                                st.write("This could be because:")
+                                st.markdown("- The webpage doesn't contain images")
+                                st.markdown("- Images are loaded dynamically with JavaScript")
+                                st.markdown("- Images are in unsupported formats")
+                        tab_index += 1
+                    
+                    # Videos tab
+                    if extract_videos:
+                        with tabs[tab_index]:
+                            st.subheader("Extracted Videos & Audio")
+                            if video_content:
+                                st.write(f"Found {len(video_content)} videos/audio files:")
+                                for i, video_section in enumerate(video_content, 1):
+                                    st.write(f"**Media {i}:**")
+                                    display_video_content(video_section)
+                                    st.write("---")
+                            else:
+                                st.info("No videos or audio found on this webpage.")
+                                st.write("This could be because:")
+                                st.markdown("- The webpage doesn't contain video/audio content")
+                                st.markdown("- Media is embedded in unsupported formats")
+                                st.markdown("- Media requires JavaScript to load")
+                else:
+                    # Only text content, display normally
+                    display_formatted_content('\n\n'.join(text_content))
                 
                 # Enhanced export section
                 st.markdown("---")
