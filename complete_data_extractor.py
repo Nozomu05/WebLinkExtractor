@@ -186,39 +186,62 @@ def extract_all_webpage_data(url: str) -> str:
                             
                             import re
                             
-                            # Use fallback text parsing approach since accordion detection isn't working
+                            # Extract FAQ content using improved text parsing
                             faq_text = child.get_text()
                             lines = faq_text.split('\n')
                             
-                            current_section = None
-                            current_question = None
-                            current_answer_lines = []
+                            # Track all sections and questions
+                            all_sections = []
+                            all_questions = []
                             
+                            # First pass: identify all sections and questions
                             for line in lines:
                                 line = line.strip()
                                 if not line:
                                     continue
                                 
+                                # Check for section headers (broader matching)
+                                section_keywords = ['Thông tin chung', 'Các câu hỏi', 'câu hỏi về', 'liên quan đến', 'kết quả thi']
+                                if any(keyword in line for keyword in section_keywords):
+                                    if 10 < len(line) < 120:  # More flexible length
+                                        all_sections.append(line)
+                                
+                                # Check for numbered questions
+                                if re.match(r'^\d+[.\s]', line) and len(line) > 15:
+                                    all_questions.append(line)
+                            
+                            # Second pass: extract content with proper organization
+                            current_section = None
+                            current_question = None
+                            current_answer_lines = []
+                            questions_in_section = 0
+                            
+                            for i, line in enumerate(lines):
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                
                                 # Check if this is a section header
-                                if any(keyword in line for keyword in ['Thông tin chung', 'Các câu hỏi', 'câu hỏi về', 'liên quan đến']):
-                                    if 15 < len(line) < 100:  # Reasonable section title length
-                                        if current_question and current_answer_lines:
-                                            # Save previous Q&A
-                                            content_parts.append(f"**Q: {current_question}**")
-                                            content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
-                                            content_parts.append("")
-                                        
-                                        current_section = line
-                                        content_parts.append(f"### {current_section}")
+                                if line in all_sections:
+                                    # Save previous Q&A if exists
+                                    if current_question and current_answer_lines:
+                                        content_parts.append(f"**Q: {current_question}**")
+                                        content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
                                         content_parts.append("")
-                                        current_question = None
-                                        current_answer_lines = []
-                                        continue
+                                    
+                                    # Start new section
+                                    current_section = line
+                                    content_parts.append(f"### {current_section}")
+                                    content_parts.append("")
+                                    current_question = None
+                                    current_answer_lines = []
+                                    questions_in_section = 0
+                                    continue
                                 
                                 # Check if this is a numbered question
-                                if re.match(r'^\d+[.\s]', line) and len(line) > 20:
+                                if line in all_questions:
+                                    # Save previous Q&A if exists
                                     if current_question and current_answer_lines:
-                                        # Save previous Q&A
                                         content_parts.append(f"**Q: {current_question}**")
                                         content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
                                         content_parts.append("")
@@ -226,9 +249,11 @@ def extract_all_webpage_data(url: str) -> str:
                                     # Start new question
                                     current_question = re.sub(r'^\d+[.\s]*', '', line)
                                     current_answer_lines = []
-                                elif current_question and len(line) > 5:
-                                    # Add to current answer
-                                    current_answer_lines.append(line)
+                                    questions_in_section += 1
+                                elif current_question and len(line) > 3:
+                                    # Collect answer lines more broadly
+                                    if not re.match(r'^\d+[.\s]', line):  # Not another question
+                                        current_answer_lines.append(line)
                             
                             # Add final Q&A if exists
                             if current_question and current_answer_lines:
