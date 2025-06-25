@@ -85,6 +85,8 @@ The deployment strategy prioritizes ease of deployment and automatic scaling, ma
 
 ```
 Changelog:
+- June 25, 2025: Successfully implemented Pictures tab with checkbox-controlled image extraction - displays all extracted images from webpages
+- June 25, 2025: Fixed image detection logic to properly extract and display images in separate Pictures tab when checkbox is selected
 - June 25, 2025: Implemented tabbed interface with checkboxes for media extraction - separate tabs for Text, Pictures, and Videos
 - June 25, 2025: Redesigned UI with separate extraction tools: "Extract Text Only", "Extract with Pictures", "Extract with Videos"
 - June 25, 2025: Added optional media extraction with checkboxes to include/exclude images and videos in original positions

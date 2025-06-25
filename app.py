@@ -112,7 +112,7 @@ def display_image_content(section):
         image_url = section[url_start:url_end]
         
         if image_url:
-            st.image(image_url, caption=alt_text if alt_text else None, use_column_width=True)
+            st.image(image_url, caption=alt_text if alt_text else None, use_container_width=True)
     except:
         st.markdown(section)
 
@@ -351,20 +351,7 @@ def main():
                 # Extract data with selected media options
                 content = extract_all_webpage_data(url_input, include_images=extract_pictures, include_videos=extract_videos)
                 
-                # Debug: Show what we got
-                st.write(f"**Debug: Extraction settings** - Pictures: {extract_pictures}, Videos: {extract_videos}")
-                st.write(f"**Debug: Content length** - {len(content)} characters")
-                
-                # Check for images in raw content
-                import re
-                raw_images = re.findall(r'!\[.*?\]\([^)]+\)', content)
-                st.write(f"**Debug: Raw images found** - {len(raw_images)}")
-                if raw_images:
-                    st.write("First 3 raw images:")
-                    for i, img in enumerate(raw_images[:3]):
-                        st.write(f"  {i+1}: {img[:100]}...")
-                else:
-                    st.write("No image patterns found in raw content")
+
                 
                 if not content or len(content.strip()) < 50:
                     st.warning("Unable to extract meaningful content from this URL.")
@@ -493,28 +480,6 @@ def main():
                                     st.write("---")
                             else:
                                 st.info("No images found on this webpage.")
-                                st.write("**Debug Info:**")
-                                st.write(f"Total content sections: {len(sections)}")
-                                st.write("Sample sections:")
-                                for i, section in enumerate(sections[:5]):
-                                    if section.strip():
-                                        st.write(f"Section {i+1}: {section[:100]}...")
-                                        # Check if this section contains images
-                                        if '![' in section:
-                                            st.write(f"  → Contains images: YES")
-                                            import re
-                                            imgs = re.findall(r'!\[.*?\]\([^)]+\)', section)
-                                            st.write(f"  → Found {len(imgs)} image patterns")
-                                        else:
-                                            st.write(f"  → Contains images: NO")
-                                
-                                # Show image_content array info
-                                st.write(f"**Image content array length:** {len(image_content)}")
-                                if image_content:
-                                    st.write("First few image entries:")
-                                    for i, img in enumerate(image_content[:3]):
-                                        st.write(f"Image {i+1}: {img}")
-                                
                                 st.write("**This could be because:**")
                                 st.markdown("- The webpage doesn't contain images")
                                 st.markdown("- Images are loaded dynamically with JavaScript")
