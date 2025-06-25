@@ -85,6 +85,7 @@ The deployment strategy prioritizes ease of deployment and automatic scaling, ma
 
 ```
 Changelog:
+- June 25, 2025: Added optional media extraction with checkboxes to include/exclude images and videos in original positions
 - June 25, 2025: Completed FAQ extraction system with proper Q&A display under all 8 sections (4 per category)
 - June 25, 2025: Added comprehensive README.md with Linux server deployment instructions
 - June 25, 2025: Enhanced FAQ extraction to properly structure questions and answers within their respective sections with immediate Q&A pairing

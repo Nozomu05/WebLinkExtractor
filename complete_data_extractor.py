@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 import re
 import trafilatura
 
-def extract_all_webpage_data(url: str) -> str:
+def extract_all_webpage_data(url: str, include_images: bool = False, include_videos: bool = False) -> str:
     """
     Extract absolutely everything from a webpage including all text, metadata, and content
     """
