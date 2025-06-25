@@ -87,32 +87,7 @@ def extract_all_webpage_data(url: str) -> str:
         for element in soup(['figure', 'picture']):
             element.decompose()
         
-        # 3. Extract content from all possible containers
-        content_containers = [
-            soup.find('main'),
-            soup.find('article'),
-            soup.find('div', class_=re.compile(r'content|main|article|post|body', re.I)),
-            soup.find('div', id=re.compile(r'content|main|article|post|body', re.I)),
-            soup.body,
-            soup
-        ]
-        
-        extracted_text = set()  # To avoid duplicates
-        
-        for container in content_containers:
-            if not container:
-                continue
-                
-            # Extract all text elements recursively
-            for element in container.find_all(text=True):
-                text = element.strip()
-                if text and len(text) > 2:
-                    # Clean up the text
-                    text = re.sub(r'\s+', ' ', text)
-                    if text not in extracted_text and len(text) > 3:
-                        extracted_text.add(text)
-        
-        # 4. Also try trafilatura for structured extraction
+        # 3. Try trafilatura first for fallback content
         trafilatura_content = trafilatura.extract(
             response.text,
             include_comments=False,
@@ -126,63 +101,60 @@ def extract_all_webpage_data(url: str) -> str:
             deduplicate=False
         )
         
-        if trafilatura_content:
-            # Split trafilatura content and add to our set
-            for line in trafilatura_content.split('\n'):
-                line = line.strip()
-                if line and len(line) > 3:
-                    extracted_text.add(line)
-        
-        # 5. Extract content in exact DOM order preserving webpage structure
-        def extract_in_dom_order(element, level=0):
-            """Extract content in exact DOM traversal order maintaining webpage structure"""
+        # 4. Extract complete content in exact DOM order preserving webpage structure
+        def extract_complete_dom_content(element, level=0, max_level=10):
+            """Extract ALL content in exact DOM traversal order maintaining webpage structure"""
             content_parts = []
             
-            if not element:
+            if not element or level > max_level:
                 return content_parts
             
-            # Process all child nodes in exact DOM order
+            # Process ALL child nodes in exact DOM order - don't skip anything important
             for child in element.children if hasattr(element, 'children') else []:
                 if hasattr(child, 'name') and child.name:
                     element_name = child.name.lower()
                     
-                    # Skip unwanted elements completely
-                    if element_name in ['script', 'style', 'nav', 'aside'] or \
-                       (child.get('class') and any(cls in str(child.get('class')).lower() 
-                                                  for cls in ['nav', 'navigation', 'sidebar', 'menu', 'ad', 'advertisement', 'social'])):
+                    # Only skip truly unwanted elements
+                    if element_name in ['script', 'style']:
                         continue
                     
-                    # Handle different elements in exact order they appear
+                    # Skip only obvious navigation/ads, but be more permissive
+                    if (child.get('class') and 
+                        any(cls in str(child.get('class')).lower() 
+                            for cls in ['navbar', 'navigation-bar', 'header-nav', 'footer-nav', 'advertisement', 'google-ads'])):
+                        continue
+                    
+                    # Handle ALL content elements in exact order they appear
                     if element_name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
                         text = child.get_text(strip=True)
-                        if text and len(text) > 1:
+                        if text:
                             heading_level = int(element_name[1])
                             content_parts.append(f"{'#' * heading_level} {text}")
                     
                     elif element_name == 'p':
                         text = child.get_text(strip=True)
-                        if text and len(text) > 3:
+                        if text:
                             content_parts.append(text)
                     
                     elif element_name in ['ul', 'ol']:
-                        # Process list items in order
+                        # Process ALL list items in order
                         for li in child.find_all('li', recursive=False):
                             li_text = li.get_text(strip=True)
-                            if li_text and len(li_text) > 1:
+                            if li_text:
                                 content_parts.append(f"• {li_text}")
                     
                     elif element_name == 'blockquote':
                         text = child.get_text(strip=True)
-                        if text and len(text) > 5:
+                        if text:
                             content_parts.append(f"> {text}")
                     
                     elif element_name == 'pre':
                         text = child.get_text(strip=True)
-                        if text and len(text) > 3:
+                        if text:
                             content_parts.append(f"```\n{text}\n```")
                     
                     elif element_name == 'table':
-                        # Process table rows in order
+                        # Process ALL table content
                         for row in child.find_all('tr'):
                             cells = []
                             for cell in row.find_all(['td', 'th']):
@@ -193,73 +165,65 @@ def extract_all_webpage_data(url: str) -> str:
                                 content_parts.append(" | ".join(cells))
                     
                     elif element_name == 'details':
-                        # Handle FAQ/accordion sections properly
+                        # Handle FAQ/accordion sections with ALL content
                         summary = child.find('summary')
                         if summary:
                             summary_text = summary.get_text(strip=True)
                             if summary_text:
                                 content_parts.append(f"**{summary_text}**")
                         
-                        # Get the details content
-                        details_content = extract_in_dom_order(child, level + 1)
+                        # Get ALL the details content recursively
+                        details_content = extract_complete_dom_content(child, level + 1, max_level)
                         content_parts.extend(details_content)
                     
-                    elif element_name in ['div', 'section', 'article', 'main', 'header', 'footer']:
-                        # For containers, check if they have meaningful direct text
-                        direct_text_nodes = []
-                        has_block_children = False
-                        
-                        for node in child.children:
-                            if isinstance(node, str):
-                                text = node.strip()
-                                if text and len(text) > 5:
-                                    direct_text_nodes.append(text)
-                            elif hasattr(node, 'name') and node.name in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'div', 'section']:
-                                has_block_children = True
-                        
-                        if direct_text_nodes and not has_block_children:
-                            # Container with direct text content
-                            combined_text = ' '.join(direct_text_nodes)
-                            if len(combined_text) > 10:
-                                content_parts.append(combined_text)
-                        else:
-                            # Recursively process children in DOM order
-                            child_content = extract_in_dom_order(child, level + 1)
-                            content_parts.extend(child_content)
+                    elif element_name in ['div', 'section', 'article', 'main', 'header', 'footer', 'aside', 'nav']:
+                        # Process ALL containers - don't skip any content
+                        child_content = extract_complete_dom_content(child, level + 1, max_level)
+                        content_parts.extend(child_content)
                     
-                    elif element_name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code', 'small']:
-                        # Only include if it's standalone (not inside paragraph)
-                        parent = child.parent
-                        if parent and parent.name not in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th']:
-                            text = child.get_text(strip=True)
-                            if text and len(text) > 3:
+                    elif element_name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code', 'small', 'label', 'button']:
+                        # Include standalone text elements
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 2:
+                            # Check if this is meaningful standalone content
+                            parent = child.parent
+                            if (not parent or 
+                                parent.name not in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th'] or
+                                len(text) > 20):  # Include longer text even if inside paragraphs
                                 content_parts.append(text)
+                    
+                    elif element_name in ['dt', 'dd']:
+                        # Definition lists
+                        text = child.get_text(strip=True)
+                        if text:
+                            prefix = "**" if element_name == 'dt' else "  "
+                            suffix = "**" if element_name == 'dt' else ""
+                            content_parts.append(f"{prefix}{text}{suffix}")
                 
                 elif isinstance(child, str):
-                    # Direct text node
+                    # Direct text nodes - include ALL meaningful text
                     text = child.strip()
-                    if text and len(text) > 8:
+                    if text and len(text) > 3:
                         content_parts.append(text)
             
             return content_parts
         
-        # Extract content in exact DOM order from main body
+        # Extract ALL content in exact DOM order from entire document
         body = soup.body if soup.body else soup
-        dom_ordered_content = extract_in_dom_order(body)
+        complete_content = extract_complete_dom_content(body)
         
-        # Combine title/metadata with DOM-ordered content
+        # Combine title/metadata with complete DOM-ordered content (no duplicates)
         final_content = []
         final_content.extend(all_content)  # Title and metadata first
-        final_content.extend(dom_ordered_content)  # Then content in exact webpage order
+        final_content.extend(complete_content)  # Then ALL content in exact webpage order
         
-        # Only add trafilatura content if we got very little from DOM extraction
-        if len(dom_ordered_content) < 5 and trafilatura_content:
+        # Only use trafilatura as absolute fallback if DOM extraction failed completely
+        if len(complete_content) < 3 and trafilatura_content:
             trafilatura_lines = trafilatura_content.split('\n')
             for line in trafilatura_lines:
                 line = line.strip()
-                if line and len(line) > 10:
-                    if not any(line in existing for existing in final_content):
-                        final_content.append(line)
+                if line and len(line) > 5:
+                    final_content.append(line)
         
         # Join and clean up
         result = '\n\n'.join(filter(None, final_content))
