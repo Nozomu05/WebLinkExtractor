@@ -186,13 +186,13 @@ def extract_all_webpage_data(url: str) -> str:
                             
                             import re
                             
-                            # Extract FAQ with proper category and section organization
+                            # Extract FAQ with improved Q&A capture
                             import re
                             
                             faq_text = child.get_text()
                             lines = [line.strip() for line in faq_text.split('\n') if line.strip()]
                             
-                            # Organize by categories and their sections
+                            # Define categories and sections
                             categories = {
                                 "FAQs thi trên giấy": [
                                     "Thông tin chung về bài thi PEIC",
@@ -208,67 +208,66 @@ def extract_all_webpage_data(url: str) -> str:
                                 ]
                             }
                             
-                            # Track questions for each section
+                            # First collect all Q&A content regardless of section
+                            all_qa = []
+                            i = 0
+                            
+                            while i < len(lines):
+                                line = lines[i]
+                                
+                                # Look for numbered questions
+                                if re.match(r'^\d+[\s.]', line) and len(line) > 15:
+                                    question = re.sub(r'^\d+[\s.]*', '', line)
+                                    answer_parts = []
+                                    
+                                    # Collect answer lines until next question or section
+                                    j = i + 1
+                                    while j < len(lines):
+                                        next_line = lines[j]
+                                        
+                                        # Stop if we hit another question or clear section header
+                                        if (re.match(r'^\d+[\s.]', next_line) and len(next_line) > 15) or \
+                                           any(any(sec in next_line for sec in cat_sections) 
+                                               for cat_sections in categories.values()):
+                                            break
+                                            
+                                        if len(next_line) > 5:
+                                            answer_parts.append(next_line)
+                                        j += 1
+                                    
+                                    if answer_parts:
+                                        all_qa.append({
+                                            'question': question,
+                                            'answer': ' '.join(answer_parts),
+                                            'line_index': i
+                                        })
+                                    
+                                    i = j
+                                else:
+                                    i += 1
+                            
+                            # Assign Q&As to sections based on context
                             section_content = {}
                             current_section = None
-                            current_question = None
-                            answer_lines = []
                             
-                            # First pass: collect all questions and answers by section
                             for i, line in enumerate(lines):
-                                # Check for section headers
-                                section_found = None
+                                # Track current section
                                 for cat_sections in categories.values():
                                     for section in cat_sections:
                                         if section in line and len(line) < 120:
-                                            section_found = section
+                                            current_section = section
+                                            if current_section not in section_content:
+                                                section_content[current_section] = []
                                             break
-                                    if section_found:
-                                        break
                                 
-                                if section_found:
-                                    # Save previous Q&A
-                                    if current_question and answer_lines and current_section:
-                                        if current_section not in section_content:
-                                            section_content[current_section] = []
-                                        section_content[current_section].append({
-                                            'question': current_question,
-                                            'answer': ' '.join(answer_lines)
-                                        })
-                                    
-                                    current_section = section_found
-                                    current_question = None
-                                    answer_lines = []
-                                
-                                # Check for numbered questions
-                                elif re.match(r'^\d+\s+', line) and len(line) > 20:
-                                    # Save previous Q&A
-                                    if current_question and answer_lines and current_section:
-                                        if current_section not in section_content:
-                                            section_content[current_section] = []
-                                        section_content[current_section].append({
-                                            'question': current_question,
-                                            'answer': ' '.join(answer_lines)
-                                        })
-                                    
-                                    current_question = re.sub(r'^\d+\s*', '', line)
-                                    answer_lines = []
-                                
-                                # Collect answer content
-                                elif current_question and len(line) > 5:
-                                    if not (re.match(r'^\d+\s+', line) or any(any(sec in line for sec in cat_sections) for cat_sections in categories.values())):
-                                        answer_lines.append(line)
+                                # Assign nearby Q&As to current section
+                                if current_section:
+                                    for qa in all_qa:
+                                        if abs(qa['line_index'] - i) < 20:  # Within reasonable distance
+                                            if qa not in section_content[current_section]:
+                                                section_content[current_section].append(qa)
                             
-                            # Save final Q&A
-                            if current_question and answer_lines and current_section:
-                                if current_section not in section_content:
-                                    section_content[current_section] = []
-                                section_content[current_section].append({
-                                    'question': current_question,
-                                    'answer': ' '.join(answer_lines)
-                                })
-                            
-                            # Second pass: organize output by category and section
+                            # Generate organized output
                             for category, sections in categories.items():
                                 content_parts.append(f"## {category}")
                                 content_parts.append("")
