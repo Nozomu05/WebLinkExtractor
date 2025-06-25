@@ -348,8 +348,23 @@ def main():
         # Show loading state
         with st.spinner("Extracting content..."):
             try:
-                # Extract all data from the webpage
-                content = extract_all_webpage_data(url_input)
+                # Extract data with selected media options
+                content = extract_all_webpage_data(url_input, include_images=extract_pictures, include_videos=extract_videos)
+                
+                # Debug: Show what we got
+                st.write(f"**Debug: Extraction settings** - Pictures: {extract_pictures}, Videos: {extract_videos}")
+                st.write(f"**Debug: Content length** - {len(content)} characters")
+                
+                # Check for images in raw content
+                import re
+                raw_images = re.findall(r'!\[.*?\]\([^)]+\)', content)
+                st.write(f"**Debug: Raw images found** - {len(raw_images)}")
+                if raw_images:
+                    st.write("First 3 raw images:")
+                    for i, img in enumerate(raw_images[:3]):
+                        st.write(f"  {i+1}: {img[:100]}...")
+                else:
+                    st.write("No image patterns found in raw content")
                 
                 if not content or len(content.strip()) < 50:
                     st.warning("Unable to extract meaningful content from this URL.")
