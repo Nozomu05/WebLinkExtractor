@@ -52,10 +52,8 @@ def display_content_with_tabs(content, include_pictures, include_videos):
     
 
     
-    if len(tab_names) == 1:
-        # Only text content, display normally
-        display_formatted_content('\n\n'.join(text_content))
-    else:
+    # Always create tabs if any media extraction is enabled
+    if include_pictures or include_videos:
         # Create tabs
         tabs = st.tabs(tab_names)
         
@@ -98,6 +96,9 @@ def display_content_with_tabs(content, include_pictures, include_videos):
                     st.markdown("- The webpage doesn't contain video/audio content")
                     st.markdown("- Media is embedded in unsupported formats")
                     st.markdown("- Media requires JavaScript to load")
+    else:
+        # Only text content, display normally
+        display_formatted_content('\n\n'.join(text_content))
 
 def display_image_content(section):
     """Display image content"""
