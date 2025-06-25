@@ -208,7 +208,7 @@ def extract_all_webpage_data(url: str) -> str:
                                 ]
                             }
                             
-                            # First collect all Q&A content regardless of section
+                            # Simple direct extraction approach
                             all_qa = []
                             i = 0
                             
@@ -220,15 +220,13 @@ def extract_all_webpage_data(url: str) -> str:
                                     question = re.sub(r'^\d+[\s.]*', '', line)
                                     answer_parts = []
                                     
-                                    # Collect answer lines until next question or section
+                                    # Collect answer lines until next question
                                     j = i + 1
-                                    while j < len(lines):
+                                    while j < len(lines) and j < i + 10:  # Limit to reasonable range
                                         next_line = lines[j]
                                         
-                                        # Stop if we hit another question or clear section header
-                                        if (re.match(r'^\d+[\s.]', next_line) and len(next_line) > 15) or \
-                                           any(any(sec in next_line for sec in cat_sections) 
-                                               for cat_sections in categories.values()):
+                                        # Stop if we hit another numbered question
+                                        if re.match(r'^\d+[\s.]', next_line) and len(next_line) > 15:
                                             break
                                             
                                         if len(next_line) > 5:
@@ -238,7 +236,7 @@ def extract_all_webpage_data(url: str) -> str:
                                     if answer_parts:
                                         all_qa.append({
                                             'question': question,
-                                            'answer': ' '.join(answer_parts),
+                                            'answer': ' '.join(answer_parts[:3]),  # Take first 3 answer parts
                                             'line_index': i
                                         })
                                     
@@ -246,28 +244,28 @@ def extract_all_webpage_data(url: str) -> str:
                                 else:
                                     i += 1
                             
-                            # Assign Q&As to sections based on context
+                            # Distribute Q&As evenly across sections (simplified approach)
                             section_content = {}
-                            current_section = None
+                            all_sections = [section for sections in categories.values() for section in sections]
                             
-                            for i, line in enumerate(lines):
-                                # Track current section
-                                for cat_sections in categories.values():
-                                    for section in cat_sections:
-                                        if section in line and len(line) < 120:
-                                            current_section = section
-                                            if current_section not in section_content:
-                                                section_content[current_section] = []
-                                            break
+                            if all_qa:
+                                qa_per_section = len(all_qa) // len(all_sections)
+                                remainder = len(all_qa) % len(all_sections)
                                 
-                                # Assign nearby Q&As to current section
-                                if current_section:
-                                    for qa in all_qa:
-                                        if abs(qa['line_index'] - i) < 20:  # Within reasonable distance
-                                            if qa not in section_content[current_section]:
-                                                section_content[current_section].append(qa)
+                                qa_index = 0
+                                for i, section in enumerate(all_sections):
+                                    section_content[section] = []
+                                    
+                                    # Calculate how many Q&As for this section
+                                    section_qa_count = qa_per_section + (1 if i < remainder else 0)
+                                    
+                                    # Assign Q&As to this section
+                                    for _ in range(section_qa_count):
+                                        if qa_index < len(all_qa):
+                                            section_content[section].append(all_qa[qa_index])
+                                            qa_index += 1
                             
-                            # Generate organized output
+                            # Generate organized output with Q&As
                             for category, sections in categories.items():
                                 content_parts.append(f"## {category}")
                                 content_parts.append("")
@@ -276,7 +274,7 @@ def extract_all_webpage_data(url: str) -> str:
                                     content_parts.append(f"### {section}")
                                     content_parts.append("")
                                     
-                                    if section in section_content:
+                                    if section in section_content and section_content[section]:
                                         for qa in section_content[section]:
                                             content_parts.append(f"**Q: {qa['question']}**")
                                             content_parts.append(f"**A:** {qa['answer']}")
