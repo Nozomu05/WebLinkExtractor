@@ -186,79 +186,79 @@ def extract_all_webpage_data(url: str) -> str:
                             
                             import re
                             
-                            # Extract FAQ content using improved text parsing
+                            # Process FAQ content using comprehensive text extraction
+                            import re
+                            
+                            # Get the complete FAQ text
                             faq_text = child.get_text()
-                            lines = faq_text.split('\n')
+                            lines = [line.strip() for line in faq_text.split('\n') if line.strip()]
                             
-                            # Track all sections and questions
-                            all_sections = []
-                            all_questions = []
+                            # Define all expected sections based on the website structure
+                            expected_sections = [
+                                "Thông tin chung về bài thi PEIC",
+                                "Các câu hỏi về việc đăng ký thi PEIC", 
+                                "Các câu hỏi liên quan đến ngày thi PEIC",
+                                "Các câu hỏi liên quan đến kết quả thi PEIC",
+                                "Thông tin chung về bài thi PEIC CBT",
+                                "Các câu hỏi về việc đăng ký thi PEIC CBT",
+                                "Các câu hỏi liên quan đến ngày thi PEIC CBT", 
+                                "Các câu hỏi liên quan đến kết quả thi PEIC CBT"
+                            ]
                             
-                            # First pass: identify all sections and questions
-                            for line in lines:
-                                line = line.strip()
-                                if not line:
-                                    continue
-                                
-                                # Check for section headers (broader matching)
-                                section_keywords = ['Thông tin chung', 'Các câu hỏi', 'câu hỏi về', 'liên quan đến', 'kết quả thi']
-                                if any(keyword in line for keyword in section_keywords):
-                                    if 10 < len(line) < 120:  # More flexible length
-                                        all_sections.append(line)
-                                
-                                # Check for numbered questions
-                                if re.match(r'^\d+[.\s]', line) and len(line) > 15:
-                                    all_questions.append(line)
-                            
-                            # Second pass: extract content with proper organization
+                            # Process content line by line
                             current_section = None
                             current_question = None
-                            current_answer_lines = []
-                            questions_in_section = 0
+                            answer_lines = []
+                            i = 0
                             
-                            for i, line in enumerate(lines):
-                                line = line.strip()
-                                if not line:
-                                    continue
+                            while i < len(lines):
+                                line = lines[i]
                                 
-                                # Check if this is a section header
-                                if line in all_sections:
+                                # Check if line matches any expected section
+                                section_match = None
+                                for section in expected_sections:
+                                    if section in line and len(line) < 120:
+                                        section_match = section
+                                        break
+                                
+                                if section_match:
                                     # Save previous Q&A if exists
-                                    if current_question and current_answer_lines:
+                                    if current_question and answer_lines:
                                         content_parts.append(f"**Q: {current_question}**")
-                                        content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
+                                        content_parts.append(f"**A:** {' '.join(answer_lines)}")
                                         content_parts.append("")
                                     
                                     # Start new section
-                                    current_section = line
+                                    current_section = section_match
                                     content_parts.append(f"### {current_section}")
                                     content_parts.append("")
                                     current_question = None
-                                    current_answer_lines = []
-                                    questions_in_section = 0
-                                    continue
+                                    answer_lines = []
                                 
-                                # Check if this is a numbered question
-                                if line in all_questions:
+                                # Check if line is a numbered question
+                                elif re.match(r'^\d+\s+', line) and len(line) > 20:
                                     # Save previous Q&A if exists
-                                    if current_question and current_answer_lines:
+                                    if current_question and answer_lines:
                                         content_parts.append(f"**Q: {current_question}**")
-                                        content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
+                                        content_parts.append(f"**A:** {' '.join(answer_lines)}")
                                         content_parts.append("")
                                     
                                     # Start new question
-                                    current_question = re.sub(r'^\d+[.\s]*', '', line)
-                                    current_answer_lines = []
-                                    questions_in_section += 1
-                                elif current_question and len(line) > 3:
-                                    # Collect answer lines more broadly
-                                    if not re.match(r'^\d+[.\s]', line):  # Not another question
-                                        current_answer_lines.append(line)
+                                    current_question = re.sub(r'^\d+\s*', '', line)
+                                    answer_lines = []
+                                
+                                # Collect answer content
+                                elif current_question and len(line) > 5:
+                                    # Skip if this looks like another question or section
+                                    if not (re.match(r'^\d+\s+', line) or any(sec in line for sec in expected_sections)):
+                                        answer_lines.append(line)
+                                
+                                i += 1
                             
                             # Add final Q&A if exists
-                            if current_question and current_answer_lines:
+                            if current_question and answer_lines:
                                 content_parts.append(f"**Q: {current_question}**")
-                                content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
+                                content_parts.append(f"**A:** {' '.join(answer_lines)}")
                                 content_parts.append("")
                             
 
