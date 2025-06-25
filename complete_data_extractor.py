@@ -199,12 +199,12 @@ def extract_all_webpage_data(url: str) -> str:
                                 if title and len(title) > 10 and 'FAQ' not in title:
                                     section_titles.append(title)
                             
-                            # Direct extraction of all accordion items
+                            # Extract all accordion items with proper sectioning
                             all_accordion_items = child.find_all('div', class_='accordion-item')
                             
                             if all_accordion_items:
-                                # Group questions by sections based on navigation
-                                items_per_section = max(1, len(all_accordion_items) // max(len(section_titles), 1)) if section_titles else len(all_accordion_items)
+                                # Calculate roughly how many items per section
+                                items_per_section = len(all_accordion_items) // max(len(section_titles), 1) if section_titles else len(all_accordion_items)
                                 current_section_idx = 0
                                 items_in_current_section = 0
                                 
@@ -214,7 +214,7 @@ def extract_all_webpage_data(url: str) -> str:
                                     content_parts.append("")
                                 
                                 for item in all_accordion_items:
-                                    # Move to next section if needed
+                                    # Check if we should move to next section
                                     if (section_titles and items_in_current_section >= items_per_section and 
                                         current_section_idx < len(section_titles) - 1):
                                         current_section_idx += 1
@@ -231,7 +231,7 @@ def extract_all_webpage_data(url: str) -> str:
                                             clean_question = re.sub(r'^\d+\s*', '', question_text)
                                             content_parts.append(f"**Q: {clean_question}**")
                                             
-                                            # Extract answer
+                                            # Extract answer immediately after question
                                             answer_div = item.find('div', class_='accordion-collapse')
                                             if answer_div:
                                                 answer_body = answer_div.find('div', class_='accordion-body')
@@ -239,9 +239,65 @@ def extract_all_webpage_data(url: str) -> str:
                                                     answer_text = answer_body.get_text(strip=True)
                                                     if answer_text:
                                                         content_parts.append(f"**A:** {answer_text}")
+                                                else:
+                                                    # Fallback to full collapse div
+                                                    answer_text = answer_div.get_text(strip=True)
+                                                    if answer_text:
+                                                        content_parts.append(f"**A:** {answer_text}")
                                             
                                             content_parts.append("")  # Space after each Q&A pair
                                             items_in_current_section += 1
+                            else:
+                                # Fallback: try to extract from the raw text structure
+                                faq_text = child.get_text()
+                                
+                                # Parse the FAQ text for numbered questions
+                                lines = faq_text.split('\n')
+                                current_section = None
+                                current_question = None
+                                current_answer_lines = []
+                                
+                                for line in lines:
+                                    line = line.strip()
+                                    if not line:
+                                        continue
+                                    
+                                    # Check if this is a section header
+                                    if any(keyword in line for keyword in ['Thông tin chung', 'Các câu hỏi', 'câu hỏi về', 'liên quan đến']):
+                                        if 15 < len(line) < 100:  # Reasonable section title length
+                                            if current_question and current_answer_lines:
+                                                # Save previous Q&A
+                                                content_parts.append(f"**Q: {current_question}**")
+                                                content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
+                                                content_parts.append("")
+                                            
+                                            current_section = line
+                                            content_parts.append(f"### {current_section}")
+                                            content_parts.append("")
+                                            current_question = None
+                                            current_answer_lines = []
+                                            continue
+                                    
+                                    # Check if this is a numbered question
+                                    if re.match(r'^\d+[.\s]', line) and len(line) > 20:
+                                        if current_question and current_answer_lines:
+                                            # Save previous Q&A
+                                            content_parts.append(f"**Q: {current_question}**")
+                                            content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
+                                            content_parts.append("")
+                                        
+                                        # Start new question
+                                        current_question = re.sub(r'^\d+[.\s]*', '', line)
+                                        current_answer_lines = []
+                                    elif current_question and len(line) > 5:
+                                        # Add to current answer
+                                        current_answer_lines.append(line)
+                                
+                                # Add final Q&A if exists
+                                if current_question and current_answer_lines:
+                                    content_parts.append(f"**Q: {current_question}**")
+                                    content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
+                                    content_parts.append("")
                             
 
                         else:
