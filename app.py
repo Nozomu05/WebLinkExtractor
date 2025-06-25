@@ -54,6 +54,14 @@ def display_content_with_tabs(content, include_pictures, include_videos):
     st.write(f"Debug: Tab names = {tab_names}")
     st.write(f"Debug: Text sections = {len(text_content)}, Image sections = {len(image_content)}, Video sections = {len(video_content)}")
     
+    # Show sample of image content for debugging
+    if image_content:
+        st.write("Sample image content:")
+        for i, img in enumerate(image_content[:3]):
+            st.write(f"Image {i+1}: {img[:100]}...")
+    else:
+        st.write("Debug: No image content found in extracted data")
+    
     if len(tab_names) == 1:
         # Only text content, display normally
         display_formatted_content('\n\n'.join(text_content))
