@@ -75,16 +75,73 @@ def extract_all_webpage_data(url: str, include_images: bool = False, include_vid
         if meta_desc and meta_desc.get('content'):
             all_content.append(f"**Description:** {meta_desc.get('content')}\n")
         
-        # 2. Remove scripts, styles, images, videos, and other media content
-        for element in soup(['script', 'style', 'img', 'video', 'audio', 'iframe', 'embed', 'object', 'canvas', 'svg']):
+        # 2. Extract media content before removal (if needed)
+        media_content = []
+        
+        # Extract images if requested
+        if include_images:
+            for img in soup.find_all('img'):
+                src = img.get('src', '') or img.get('data-src', '') or img.get('data-lazy-src', '')
+                alt = img.get('alt', '') or 'Image'
+                
+                if src:
+                    # Convert relative URLs to absolute
+                    if src.startswith('//'):
+                        src = 'https:' + src
+                    elif src.startswith('/'):
+                        from urllib.parse import urljoin
+                        src = urljoin(url, src)
+                    elif not src.startswith('http'):
+                        from urllib.parse import urljoin
+                        src = urljoin(url, src)
+                    
+                    # Skip very small images (likely icons/spacers)
+                    width = img.get('width', '')
+                    height = img.get('height', '')
+                    if width and height:
+                        try:
+                            w, h = int(width), int(height)
+                            if w < 50 or h < 50:
+                                continue
+                        except:
+                            pass
+                    
+                    media_content.append(f"![{alt}]({src})")
+        
+        # Extract videos if requested
+        if include_videos:
+            for video in soup.find_all(['video', 'iframe']):
+                if video.name == 'video':
+                    src = video.get('src', '')
+                    if src:
+                        # Convert relative URLs to absolute
+                        if src.startswith('//'):
+                            src = 'https:' + src
+                        elif src.startswith('/'):
+                            from urllib.parse import urljoin
+                            src = urljoin(url, src)
+                        elif not src.startswith('http'):
+                            from urllib.parse import urljoin
+                            src = urljoin(url, src)
+                        media_content.append(f"**[VIDEO: {src}]**")
+                
+                elif video.name == 'iframe':
+                    src = video.get('src', '')
+                    if src and ('youtube' in src or 'vimeo' in src or 'video' in src.lower()):
+                        media_content.append(f"**[EMBEDDED VIDEO: {src}]**")
+        
+        # Now remove unwanted elements
+        elements_to_remove = ['script', 'style']
+        if not include_images:
+            elements_to_remove.extend(['img', 'figure', 'picture'])
+        if not include_videos:
+            elements_to_remove.extend(['video', 'audio', 'iframe', 'embed', 'object'])
+        
+        for element in soup(elements_to_remove + ['canvas', 'svg']):
             element.decompose()
         
-        # Remove elements with image/media related classes or attributes
-        for element in soup.find_all(attrs={'class': re.compile(r'image|img|photo|video|media|banner|ad', re.I)}):
-            element.decompose()
-        
-        # Remove figure elements that typically contain images
-        for element in soup(['figure', 'picture']):
+        # Remove elements with ad-related classes
+        for element in soup.find_all(attrs={'class': re.compile(r'banner|ad|advertisement', re.I)}):
             element.decompose()
         
         # 3. Try trafilatura first for fallback content
