@@ -208,21 +208,21 @@ def extract_all_webpage_data(url: str) -> str:
                                 ]
                             }
                             
-                            # Simple direct extraction approach
+                            # Extract Q&A pairs using proven logic
                             all_qa = []
                             i = 0
                             
                             while i < len(lines):
                                 line = lines[i]
                                 
-                                # Look for numbered questions
+                                # Look for numbered questions with more flexible pattern
                                 if re.match(r'^\d+[\s.]', line) and len(line) > 15:
                                     question = re.sub(r'^\d+[\s.]*', '', line)
                                     answer_parts = []
                                     
                                     # Collect answer lines until next question
                                     j = i + 1
-                                    while j < len(lines) and j < i + 10:  # Limit to reasonable range
+                                    while j < len(lines) and j < i + 8:  # Look at next 8 lines
                                         next_line = lines[j]
                                         
                                         # Stop if we hit another numbered question
@@ -236,15 +236,14 @@ def extract_all_webpage_data(url: str) -> str:
                                     if answer_parts:
                                         all_qa.append({
                                             'question': question,
-                                            'answer': ' '.join(answer_parts[:3]),  # Take first 3 answer parts
-                                            'line_index': i
+                                            'answer': ' '.join(answer_parts[:2])  # Take first 2 answer parts
                                         })
                                     
                                     i = j
                                 else:
                                     i += 1
                             
-                            # Distribute Q&As evenly across sections (simplified approach)
+                            # Distribute Q&As evenly across sections
                             section_content = {}
                             all_sections = [section for sections in categories.values() for section in sections]
                             
