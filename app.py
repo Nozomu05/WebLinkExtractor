@@ -45,9 +45,9 @@ def display_content_with_tabs(content, include_pictures, include_videos):
     
     # Create tabs based on selected options
     tab_names = ["Text Content"]
-    if include_pictures and image_content:
+    if include_pictures:
         tab_names.append("Pictures")
-    if include_videos and video_content:
+    if include_videos:
         tab_names.append("Videos")
     
     if len(tab_names) == 1:
@@ -63,19 +63,25 @@ def display_content_with_tabs(content, include_pictures, include_videos):
         
         # Pictures tab
         tab_index = 1
-        if include_pictures and image_content:
+        if include_pictures:
             with tabs[tab_index]:
                 st.subheader("Extracted Images")
-                for img_section in image_content:
-                    display_image_content(img_section)
+                if image_content:
+                    for img_section in image_content:
+                        display_image_content(img_section)
+                else:
+                    st.info("No images found on this webpage.")
             tab_index += 1
         
         # Videos tab
-        if include_videos and video_content:
+        if include_videos:
             with tabs[tab_index]:
                 st.subheader("Extracted Videos & Audio")
-                for video_section in video_content:
-                    display_video_content(video_section)
+                if video_content:
+                    for video_section in video_content:
+                        display_video_content(video_section)
+                else:
+                    st.info("No videos or audio found on this webpage.")
 
 def display_image_content(section):
     """Display image content"""
