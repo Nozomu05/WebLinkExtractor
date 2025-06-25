@@ -85,7 +85,8 @@ The deployment strategy prioritizes ease of deployment and automatic scaling, ma
 
 ```
 Changelog:
-- June 24, 2025. Initial setup
+- June 25, 2025: Enhanced extractor to preserve original webpage structure and remove all media content (images, videos, audio)
+- June 24, 2025: Initial setup
 ```
 
 ## User Preferences

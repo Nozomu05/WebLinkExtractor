@@ -75,8 +75,16 @@ def extract_all_webpage_data(url: str) -> str:
         if meta_desc and meta_desc.get('content'):
             all_content.append(f"**Description:** {meta_desc.get('content')}\n")
         
-        # 2. Remove only scripts and styles but keep everything else
-        for element in soup(['script', 'style']):
+        # 2. Remove scripts, styles, images, videos, and other media content
+        for element in soup(['script', 'style', 'img', 'video', 'audio', 'iframe', 'embed', 'object', 'canvas', 'svg']):
+            element.decompose()
+        
+        # Remove elements with image/media related classes or attributes
+        for element in soup.find_all(attrs={'class': re.compile(r'image|img|photo|video|media|banner|ad', re.I)}):
+            element.decompose()
+        
+        # Remove figure elements that typically contain images
+        for element in soup(['figure', 'picture']):
             element.decompose()
         
         # 3. Extract content from all possible containers
@@ -175,8 +183,12 @@ def extract_all_webpage_data(url: str) -> str:
                             content_blocks.append("")  # Add spacing after table
                     
                     # Handle block containers while preserving order
-                    elif child.name in ['div', 'section', 'article', 'main', 'aside', 'header', 'footer']:
-                        # Check if this container has direct text content
+                    elif child.name in ['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav']:
+                        # Skip navigation and sidebar elements that don't contain main content
+                        if child.get('class') and any(cls in str(child.get('class')).lower() for cls in ['nav', 'sidebar', 'menu', 'ad', 'advertisement']):
+                            continue
+                            
+                        # Check if this container has direct meaningful text content
                         direct_text = []
                         for text_node in child.children:
                             if isinstance(text_node, str):
@@ -190,18 +202,34 @@ def extract_all_webpage_data(url: str) -> str:
                             if len(combined) > 15:
                                 content_blocks.append(f"{combined}\n")
                         else:
-                            # Recursively process children to maintain order
+                            # Recursively process children to maintain webpage order
                             child_content = extract_structured_content(child, level + 1)
                             content_blocks.extend(child_content)
                     
-                    # Handle other text elements
-                    elif child.name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code']:
+                    # Handle blockquotes and quotes
+                    elif child.name == 'blockquote':
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 10:
+                            content_blocks.append(f"> {text}\n")
+                    
+                    # Handle preformatted text and code blocks
+                    elif child.name == 'pre':
                         text = child.get_text(strip=True)
                         if text and len(text) > 5:
-                            # Check if this is standalone content
+                            content_blocks.append(f"```\n{text}\n```\n")
+                    
+                    # Handle other inline text elements only if they're standalone
+                    elif child.name in ['span', 'strong', 'em', 'b', 'i', 'a', 'code', 'small']:
+                        text = child.get_text(strip=True)
+                        if text and len(text) > 5:
+                            # Check if this is standalone content not within a paragraph
                             parent = child.parent
-                            if parent and parent.name not in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                            if parent and parent.name not in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th']:
                                 content_blocks.append(f"{text}\n")
+                    
+                    # Handle line breaks
+                    elif child.name == 'br':
+                        content_blocks.append("")
                 
                 elif isinstance(child, str):
                     # Direct text content

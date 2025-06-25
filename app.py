@@ -187,7 +187,7 @@ def main():
                     return
                 
                 # Display results with enhanced styling
-                st.success(f"✅ Successfully extracted content from: **{url_input}**")
+                st.success(f"Successfully extracted content from: **{url_input}** (Images and media removed)")
                 
                 # Show content statistics with better visual design
                 col1, col2, col3 = st.columns(3)
@@ -208,10 +208,10 @@ def main():
                 <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); 
                            padding: 20px; border-radius: 10px; margin: 20px 0;">
                     <h2 style="color: white; margin: 0; text-align: center;">
-                        📄 Extracted Website Content
+                        Webpage Content (Media-Free)
                     </h2>
                     <p style="color: #f0f0f0; text-align: center; margin: 10px 0 0 0; font-style: italic;">
-                        Formatted and organized for easy reading
+                        Preserving original webpage structure and layout
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
