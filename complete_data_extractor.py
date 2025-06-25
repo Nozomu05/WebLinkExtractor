@@ -191,33 +191,39 @@ def extract_all_webpage_data(url: str) -> str:
                             # Extract FAQ content with proper structure
                             import re
                             
-                            # Get all tab navigation buttons to identify sections
-                            nav_buttons = child.find_all(['button'], class_=lambda x: x and 'nav-link' in str(x).lower())
+                            # Find all navigation buttons for section titles
+                            all_nav_buttons = child.find_all(['button'], class_=lambda x: x and 'nav-link' in str(x).lower())
                             section_titles = []
-                            for btn in nav_buttons:
+                            for btn in all_nav_buttons:
                                 title = btn.get_text(strip=True)
-                                if title and 'FAQ' not in title and len(title) > 10:  # Skip main FAQ tab buttons
+                                if title and len(title) > 10 and 'FAQ' not in title:
                                     section_titles.append(title)
                             
-                            # Find all accordion items across all tabs
-                            all_accordion_items = child.find_all(['div'], class_=lambda x: x and 'accordion-item' in str(x).lower())
+                            # Direct extraction of all accordion items
+                            all_accordion_items = child.find_all('div', class_='accordion-item')
                             
                             if all_accordion_items:
-                                # Group questions by section based on their position and tab association
+                                # Group questions by sections based on navigation
+                                items_per_section = max(1, len(all_accordion_items) // max(len(section_titles), 1)) if section_titles else len(all_accordion_items)
                                 current_section_idx = 0
-                                items_per_section = len(all_accordion_items) // max(len(section_titles), 1) if section_titles else len(all_accordion_items)
+                                items_in_current_section = 0
                                 
-                                for idx, item in enumerate(all_accordion_items):
-                                    # Determine which section this item belongs to
-                                    if section_titles and idx % items_per_section == 0 and current_section_idx < len(section_titles):
-                                        if idx > 0:  # Don't add section for first item
-                                            current_section_idx += 1
-                                        if current_section_idx < len(section_titles):
-                                            content_parts.append(f"### {section_titles[current_section_idx]}")
-                                            content_parts.append("")
+                                # Add first section title
+                                if section_titles:
+                                    content_parts.append(f"### {section_titles[0]}")
+                                    content_parts.append("")
+                                
+                                for item in all_accordion_items:
+                                    # Move to next section if needed
+                                    if (section_titles and items_in_current_section >= items_per_section and 
+                                        current_section_idx < len(section_titles) - 1):
+                                        current_section_idx += 1
+                                        items_in_current_section = 0
+                                        content_parts.append(f"### {section_titles[current_section_idx]}")
+                                        content_parts.append("")
                                     
                                     # Extract question
-                                    question_btn = item.find(['button'], class_=lambda x: x and 'accordion-button' in str(x).lower())
+                                    question_btn = item.find('button', class_='accordion-button')
                                     if question_btn:
                                         question_text = question_btn.get_text(strip=True)
                                         if question_text:
@@ -225,60 +231,17 @@ def extract_all_webpage_data(url: str) -> str:
                                             clean_question = re.sub(r'^\d+\s*', '', question_text)
                                             content_parts.append(f"**Q: {clean_question}**")
                                             
-                                            # Find corresponding answer immediately
-                                            answer_div = item.find(['div'], class_=lambda x: x and ('accordion-collapse' in str(x).lower() or 'collapse' in str(x).lower()))
+                                            # Extract answer
+                                            answer_div = item.find('div', class_='accordion-collapse')
                                             if answer_div:
-                                                answer_body = answer_div.find(['div'], class_=lambda x: x and 'accordion-body' in str(x).lower())
+                                                answer_body = answer_div.find('div', class_='accordion-body')
                                                 if answer_body:
                                                     answer_text = answer_body.get_text(strip=True)
-                                                else:
-                                                    answer_text = answer_div.get_text(strip=True)
-                                                
-                                                if answer_text:
-                                                    content_parts.append(f"**A:** {answer_text}")
+                                                    if answer_text:
+                                                        content_parts.append(f"**A:** {answer_text}")
                                             
                                             content_parts.append("")  # Space after each Q&A pair
-                            else:
-                                # Alternative approach: extract from full text with pattern matching
-                                faq_text = child.get_text()
-                                lines = faq_text.split('\n')
-                                
-                                current_section = None
-                                current_question = None
-                                current_answer_lines = []
-                                
-                                for line in lines:
-                                    line = line.strip()
-                                    if not line:
-                                        continue
-                                    
-                                    # Check if line is a section title
-                                    if any(section in line for section in ['Thông tin chung', 'Các câu hỏi', 'câu hỏi']):
-                                        if len(line) > 15 and len(line) < 100:
-                                            current_section = line
-                                            content_parts.append(f"### {current_section}")
-                                            content_parts.append("")
-                                            continue
-                                    
-                                    # Check if line starts with a number (potential question)
-                                    if re.match(r'^\d+', line) and len(line) > 20:
-                                        # Save previous Q&A if exists
-                                        if current_question and current_answer_lines:
-                                            content_parts.append(f"**Q: {current_question}**")
-                                            content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
-                                            content_parts.append("")
-                                        
-                                        # Start new question
-                                        current_question = re.sub(r'^\d+\s*', '', line)
-                                        current_answer_lines = []
-                                    elif current_question and len(line) > 5:
-                                        current_answer_lines.append(line)
-                                
-                                # Add final Q&A
-                                if current_question and current_answer_lines:
-                                    content_parts.append(f"**Q: {current_question}**")
-                                    content_parts.append(f"**A:** {' '.join(current_answer_lines)}")
-                                    content_parts.append("")
+                                            items_in_current_section += 1
                             
 
                         else:
