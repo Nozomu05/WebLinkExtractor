@@ -85,6 +85,9 @@ The deployment strategy prioritizes ease of deployment and automatic scaling, ma
 
 ```
 Changelog:
+- June 25, 2025: Created comprehensive FastAPI REST API with full endpoint documentation and interactive Swagger UI
+- June 25, 2025: Updated deployment guide with dual-service configuration for both web interface and API server
+- June 25, 2025: Added API testing suite and usage examples for Python, JavaScript, and cURL
 - June 25, 2025: Created comprehensive Linux server deployment README.md with systemd, Docker, and Nginx configurations
 - June 25, 2025: Successfully implemented Pictures tab with checkbox-controlled image extraction - displays all extracted images from webpages
 - June 25, 2025: Fixed image detection logic to properly extract and display images in separate Pictures tab when checkbox is selected

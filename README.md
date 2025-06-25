@@ -11,15 +11,131 @@ A powerful web application built with Streamlit that extracts and organizes webp
 - **FAQ Support**: Specialized extraction and formatting for FAQ sections
 - **Export Options**: Download extracted content as Markdown or plain text
 - **Responsive Design**: Clean, modern interface with gradient backgrounds and metrics display
+- **REST API**: Complete API interface for programmatic access and integration with other applications
 
 ## Technology Stack
 
 - **Backend**: Python 3.11
 - **Web Framework**: Streamlit 1.46.0+
+- **API Framework**: FastAPI with Uvicorn
 - **Content Extraction**: Trafilatura 2.0.0+, BeautifulSoup4
 - **Text Processing**: NLTK 3.9.1+
 - **HTTP Requests**: Requests 2.32.4+
 - **Deployment**: Linux server with Nginx (optional) and systemd
+
+## API Documentation
+
+The URL Content Extractor provides a complete REST API for programmatic access to content extraction functionality.
+
+### API Endpoints
+
+**Base URL**: `http://localhost:8000` (development) or `https://your-domain.com` (production)
+
+#### Health Check
+```http
+GET /health
+```
+Returns API health status.
+
+#### Extract Content (POST)
+```http
+POST /extract
+Content-Type: application/json
+
+{
+    "url": "https://example.com",
+    "include_images": true,
+    "include_videos": false
+}
+```
+
+#### Extract Content (GET)
+```http
+GET /extract?url=https://example.com&include_images=true&include_videos=false
+```
+
+#### Specialized Endpoints
+- `POST /extract/text-only` - Extract only text content
+- `POST /extract/with-images` - Extract text and images
+- `POST /extract/with-videos` - Extract text and videos  
+- `POST /extract/full` - Extract all content types
+
+### API Response Format
+```json
+{
+    "success": true,
+    "url": "https://example.com",
+    "content": {
+        "text": ["Section 1", "Section 2"],
+        "images": ["![alt](url1)", "![alt](url2)"],
+        "videos": ["**[VIDEO: title]**\nURL: url"]
+    },
+    "stats": {
+        "total_characters": 1500,
+        "word_count": 250,
+        "text_sections": 5,
+        "image_count": 3,
+        "video_count": 1
+    },
+    "message": "Content extracted successfully"
+}
+```
+
+### Interactive API Documentation
+When the API server is running, visit:
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+
+### API Usage Examples
+
+#### Python Example
+```python
+import requests
+
+# Extract text and images
+response = requests.post("http://localhost:8000/extract", json={
+    "url": "https://example.com",
+    "include_images": True,
+    "include_videos": False
+})
+
+if response.status_code == 200:
+    data = response.json()
+    print(f"Extracted {data['stats']['text_sections']} text sections")
+    print(f"Found {data['stats']['image_count']} images")
+else:
+    print(f"Error: {response.text}")
+```
+
+#### JavaScript Example
+```javascript
+fetch('http://localhost:8000/extract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        url: 'https://example.com',
+        include_images: true,
+        include_videos: false
+    })
+})
+.then(response => response.json())
+.then(data => {
+    console.log('Extraction successful:', data.stats);
+    console.log('Text sections:', data.content.text.length);
+})
+.catch(error => console.error('Error:', error));
+```
+
+#### cURL Example
+```bash
+curl -X POST "http://localhost:8000/extract" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://example.com",
+       "include_images": true,
+       "include_videos": false
+     }'
+```
 
 ## Quick Start
 
@@ -56,6 +172,9 @@ pip install -r requirements.txt
 ```bash
 cat > requirements.txt << EOF
 streamlit>=1.46.0
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
 trafilatura>=2.0.0
 beautifulsoup4>=4.12.0
 nltk>=3.9.1
@@ -73,14 +192,23 @@ nltk.download('averaged_perceptron_tagger')
 "
 ```
 
-5. **Test the application**
+5. **Test the applications**
 ```bash
+# Test Streamlit web interface
 streamlit run app.py --server.port 8501
+
+# Test API server (in another terminal)
+python api.py
+
+# Test API endpoints
+python test_api.py
 ```
 
 ## Production Deployment
 
 ### Method 1: Systemd Service (Recommended)
+
+This method deploys both the Streamlit web interface and the FastAPI server.
 
 1. **Create application user**
 ```bash
@@ -126,11 +254,12 @@ EOF
 sudo chown -R streamlit-app:streamlit-app /opt/url-extractor/.streamlit
 ```
 
-4. **Create systemd service**
+4. **Create systemd services**
 ```bash
-sudo tee /etc/systemd/system/url-extractor.service << EOF
+# Streamlit web interface service
+sudo tee /etc/systemd/system/url-extractor-web.service << EOF
 [Unit]
-Description=URL Content Extractor Streamlit App
+Description=URL Content Extractor Streamlit Web Interface
 After=network.target
 
 [Service]
@@ -153,14 +282,46 @@ ProtectHome=true
 [Install]
 WantedBy=multi-user.target
 EOF
+
+# FastAPI server service
+sudo tee /etc/systemd/system/url-extractor-api.service << EOF
+[Unit]
+Description=URL Content Extractor FastAPI Server
+After=network.target
+
+[Service]
+Type=exec
+User=streamlit-app
+Group=streamlit-app
+WorkingDirectory=/opt/url-extractor
+Environment=PATH=/opt/url-extractor/venv/bin
+ExecStart=/opt/url-extractor/venv/bin/python api.py
+Restart=always
+RestartSec=3
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/url-extractor
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
 ```
 
-5. **Start and enable service**
+5. **Start and enable services**
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable url-extractor
-sudo systemctl start url-extractor
-sudo systemctl status url-extractor
+
+# Enable and start both services
+sudo systemctl enable url-extractor-web url-extractor-api
+sudo systemctl start url-extractor-web url-extractor-api
+
+# Check status
+sudo systemctl status url-extractor-web
+sudo systemctl status url-extractor-api
 ```
 
 ### Method 2: Nginx Reverse Proxy (Optional)
@@ -178,6 +339,7 @@ server {
     listen 80;
     server_name your-domain.com;  # Replace with your domain or IP
 
+    # Web interface (Streamlit)
     location / {
         proxy_pass http://127.0.0.1:8501;
         proxy_http_version 1.1;
@@ -189,6 +351,18 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
         proxy_read_timeout 86400;
+    }
+    
+    # API endpoints
+    location /api/ {
+        rewrite ^/api/(.*) /\$1 break;
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300;
     }
 }
 EOF
@@ -280,8 +454,11 @@ sudo certbot renew --dry-run
 
 ### View Application Logs
 ```bash
-# Systemd service logs
-sudo journalctl -u url-extractor -f
+# Web interface logs
+sudo journalctl -u url-extractor-web -f
+
+# API server logs
+sudo journalctl -u url-extractor-api -f
 
 # Application-specific logs
 sudo tail -f /opt/url-extractor/logs/app.log
@@ -295,7 +472,7 @@ df -h
 free -m
 
 # Check service status
-sudo systemctl status url-extractor nginx
+sudo systemctl status url-extractor-web url-extractor-api nginx
 ```
 
 ### Backup Strategy
@@ -318,10 +495,15 @@ echo "0 2 * * * /opt/backup-url-extractor.sh" | sudo crontab -
 
 ### Common Issues
 
-1. **Service won't start**
+1. **Services won't start**
 ```bash
-sudo journalctl -u url-extractor --no-pager
-sudo systemctl status url-extractor
+# Check web interface
+sudo journalctl -u url-extractor-web --no-pager
+sudo systemctl status url-extractor-web
+
+# Check API server
+sudo journalctl -u url-extractor-api --no-pager
+sudo systemctl status url-extractor-api
 ```
 
 2. **Permission denied errors**
@@ -344,12 +526,13 @@ nltk.download('averaged_perceptron_tagger', force=True)
 ```bash
 # Check memory usage
 free -m
-# Restart service if needed
-sudo systemctl restart url-extractor
+# Restart services if needed
+sudo systemctl restart url-extractor-web url-extractor-api
 ```
 
 ### Log Locations
-- **Application logs**: `sudo journalctl -u url-extractor`
+- **Web interface logs**: `sudo journalctl -u url-extractor-web`
+- **API server logs**: `sudo journalctl -u url-extractor-api`
 - **Nginx logs**: `/var/log/nginx/access.log` and `/var/log/nginx/error.log`
 - **System logs**: `/var/log/syslog`
 
