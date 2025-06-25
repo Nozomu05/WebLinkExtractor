@@ -422,34 +422,29 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # Extract all images from the entire content first
+                import re
+                all_images = re.findall(r'!\[.*?\]\([^)]+\)', content)
+                
                 # Separate content types for tab display
                 text_content = []
-                image_content = []
+                image_content = all_images  # Use all found images
                 video_content = []
                 
-                sections = content.split('\n\n')
+                # Remove images from content and split into sections
+                text_only_content = content
+                for img in all_images:
+                    text_only_content = text_only_content.replace(img, '')
+                
+                sections = text_only_content.split('\n\n')
                 
                 for section in sections:
                     section = section.strip()
                     if not section:
                         continue
                         
-                    # Check content type - look for images anywhere in the section
-                    if '![' in section and '](' in section:
-                        # Extract individual image patterns from the section
-                        import re
-                        img_patterns = re.findall(r'!\[.*?\]\([^)]+\)', section)
-                        if img_patterns:
-                            image_content.extend(img_patterns)
-                            # Remove images from text content and keep the rest
-                            text_part = section
-                            for img in img_patterns:
-                                text_part = text_part.replace(img, '').strip()
-                            if text_part:
-                                text_content.append(text_part)
-                        else:
-                            text_content.append(section)
-                    elif section.startswith('**[') and ('VIDEO:' in section or 'AUDIO:' in section or 'EMBEDDED' in section):
+                    # Check for video content
+                    if section.startswith('**[') and ('VIDEO:' in section or 'AUDIO:' in section or 'EMBEDDED' in section):
                         video_content.append(section)
                     else:
                         text_content.append(section)
@@ -489,6 +484,21 @@ def main():
                                 for i, section in enumerate(sections[:5]):
                                     if section.strip():
                                         st.write(f"Section {i+1}: {section[:100]}...")
+                                        # Check if this section contains images
+                                        if '![' in section:
+                                            st.write(f"  → Contains images: YES")
+                                            import re
+                                            imgs = re.findall(r'!\[.*?\]\([^)]+\)', section)
+                                            st.write(f"  → Found {len(imgs)} image patterns")
+                                        else:
+                                            st.write(f"  → Contains images: NO")
+                                
+                                # Show image_content array info
+                                st.write(f"**Image content array length:** {len(image_content)}")
+                                if image_content:
+                                    st.write("First few image entries:")
+                                    for i, img in enumerate(image_content[:3]):
+                                        st.write(f"Image {i+1}: {img}")
                                 
                                 st.write("**This could be because:**")
                                 st.markdown("- The webpage doesn't contain images")
