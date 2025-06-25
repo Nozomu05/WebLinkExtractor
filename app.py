@@ -434,9 +434,21 @@ def main():
                     if not section:
                         continue
                         
-                    # Check content type
-                    if section.startswith('![') and '](' in section and section.endswith(')'):
-                        image_content.append(section)
+                    # Check content type - look for images anywhere in the section
+                    if '![' in section and '](' in section:
+                        # Extract individual image patterns from the section
+                        import re
+                        img_patterns = re.findall(r'!\[.*?\]\([^)]+\)', section)
+                        if img_patterns:
+                            image_content.extend(img_patterns)
+                            # Remove images from text content and keep the rest
+                            text_part = section
+                            for img in img_patterns:
+                                text_part = text_part.replace(img, '').strip()
+                            if text_part:
+                                text_content.append(text_part)
+                        else:
+                            text_content.append(section)
                     elif section.startswith('**[') and ('VIDEO:' in section or 'AUDIO:' in section or 'EMBEDDED' in section):
                         video_content.append(section)
                     else:
@@ -471,7 +483,14 @@ def main():
                                     st.write("---")
                             else:
                                 st.info("No images found on this webpage.")
-                                st.write("This could be because:")
+                                st.write("**Debug Info:**")
+                                st.write(f"Total content sections: {len(sections)}")
+                                st.write("Sample sections:")
+                                for i, section in enumerate(sections[:5]):
+                                    if section.strip():
+                                        st.write(f"Section {i+1}: {section[:100]}...")
+                                
+                                st.write("**This could be because:**")
                                 st.markdown("- The webpage doesn't contain images")
                                 st.markdown("- Images are loaded dynamically with JavaScript")
                                 st.markdown("- Images are in unsupported formats")
