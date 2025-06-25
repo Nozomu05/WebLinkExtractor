@@ -21,6 +21,109 @@ def is_valid_url(url):
     except:
         return False
 
+def display_content_with_tabs(content, include_pictures, include_videos):
+    """Display content in organized tabs"""
+    # Separate content types
+    text_content = []
+    image_content = []
+    video_content = []
+    
+    sections = content.split('\n\n')
+    
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+            
+        # Check content type
+        if section.startswith('![') and '](' in section and section.endswith(')'):
+            image_content.append(section)
+        elif section.startswith('**[') and ('VIDEO:' in section or 'AUDIO:' in section or 'EMBEDDED' in section):
+            video_content.append(section)
+        else:
+            text_content.append(section)
+    
+    # Create tabs based on selected options
+    tab_names = ["Text Content"]
+    if include_pictures and image_content:
+        tab_names.append("Pictures")
+    if include_videos and video_content:
+        tab_names.append("Videos")
+    
+    if len(tab_names) == 1:
+        # Only text content, display normally
+        display_formatted_content('\n\n'.join(text_content))
+    else:
+        # Create tabs
+        tabs = st.tabs(tab_names)
+        
+        # Text content tab
+        with tabs[0]:
+            display_formatted_content('\n\n'.join(text_content))
+        
+        # Pictures tab
+        tab_index = 1
+        if include_pictures and image_content:
+            with tabs[tab_index]:
+                st.subheader("Extracted Images")
+                for img_section in image_content:
+                    display_image_content(img_section)
+            tab_index += 1
+        
+        # Videos tab
+        if include_videos and video_content:
+            with tabs[tab_index]:
+                st.subheader("Extracted Videos & Audio")
+                for video_section in video_content:
+                    display_video_content(video_section)
+
+def display_image_content(section):
+    """Display image content"""
+    try:
+        alt_start = section.find('[') + 1
+        alt_end = section.find(']')
+        url_start = section.find('(') + 1
+        url_end = section.find(')')
+        
+        alt_text = section[alt_start:alt_end]
+        image_url = section[url_start:url_end]
+        
+        if image_url:
+            st.image(image_url, caption=alt_text if alt_text else None, use_column_width=True)
+    except:
+        st.markdown(section)
+
+def display_video_content(section):
+    """Display video/audio content"""
+    if 'VIDEO:' in section:
+        video_url = section.replace('**[VIDEO:', '').replace(']**', '').strip()
+        try:
+            st.video(video_url)
+        except:
+            st.markdown(f"**Video:** {video_url}")
+    elif 'AUDIO:' in section:
+        audio_url = section.replace('**[AUDIO:', '').replace(']**', '').strip()
+        try:
+            st.audio(audio_url)
+        except:
+            st.markdown(f"**Audio:** {audio_url}")
+    elif 'EMBEDDED VIDEO:' in section:
+        embed_url = section.replace('**[EMBEDDED VIDEO:', '').replace(']**', '').strip()
+        # Handle YouTube embeds
+        if 'youtube.com/watch' in embed_url:
+            video_id = embed_url.split('v=')[1].split('&')[0]
+            embed_url = f"https://www.youtube.com/embed/{video_id}"
+        elif 'youtu.be/' in embed_url:
+            video_id = embed_url.split('youtu.be/')[1].split('?')[0]
+            embed_url = f"https://www.youtube.com/embed/{video_id}"
+        
+        st.markdown(f'<iframe width="100%" height="315" src="{embed_url}" frameborder="0" allowfullscreen></iframe>', unsafe_allow_html=True)
+    elif 'EMBEDDED CONTENT:' in section:
+        embed_url = section.replace('**[EMBEDDED CONTENT:', '').replace(']**', '').strip()
+        st.markdown(f"**Embedded Content:** {embed_url}")
+    else:
+        st.markdown(section)
+
 def display_formatted_content(content):
     """
     Display content with proper formatting and structure
@@ -196,26 +299,21 @@ def main():
         help="Enter a valid URL to extract and organize its content"
     )
     
-    # Extraction tools section
-    st.subheader("Extraction Tools")
+    # Extraction options section
+    st.subheader("Extraction Options")
     
     col1, col2, col3 = st.columns(3)
     
-    extract_type = None
-    
     with col1:
-        if st.button("Extract Text Only", type="primary"):
-            extract_type = "text"
+        extract_pictures = st.checkbox("Extract Pictures", value=False, help="Include images in extraction")
     
     with col2:
-        if st.button("Extract with Pictures"):
-            extract_type = "pictures"
+        extract_videos = st.checkbox("Extract Videos", value=False, help="Include videos and audio in extraction")
     
     with col3:
-        if st.button("Extract with Videos"):
-            extract_type = "videos"
+        extract_button = st.button("Extract Content", type="primary")
     
-    if extract_type:
+    if extract_button:
         if not url_input:
             st.error("Please enter a URL to extract content from.")
             return
