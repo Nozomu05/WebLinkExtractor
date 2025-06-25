@@ -67,10 +67,17 @@ def display_content_with_tabs(content, include_pictures, include_videos):
             with tabs[tab_index]:
                 st.subheader("Extracted Images")
                 if image_content:
-                    for img_section in image_content:
+                    st.write(f"Found {len(image_content)} images:")
+                    for i, img_section in enumerate(image_content, 1):
+                        st.write(f"**Image {i}:**")
                         display_image_content(img_section)
+                        st.write("---")  # Separator between images
                 else:
                     st.info("No images found on this webpage.")
+                    st.write("This could be because:")
+                    st.markdown("- The webpage doesn't contain images")
+                    st.markdown("- Images are loaded dynamically with JavaScript")
+                    st.markdown("- Images are in unsupported formats")
             tab_index += 1
         
         # Videos tab
@@ -78,10 +85,17 @@ def display_content_with_tabs(content, include_pictures, include_videos):
             with tabs[tab_index]:
                 st.subheader("Extracted Videos & Audio")
                 if video_content:
-                    for video_section in video_content:
+                    st.write(f"Found {len(video_content)} videos/audio files:")
+                    for i, video_section in enumerate(video_content, 1):
+                        st.write(f"**Media {i}:**")
                         display_video_content(video_section)
+                        st.write("---")  # Separator between videos
                 else:
                     st.info("No videos or audio found on this webpage.")
+                    st.write("This could be because:")
+                    st.markdown("- The webpage doesn't contain video/audio content")
+                    st.markdown("- Media is embedded in unsupported formats")
+                    st.markdown("- Media requires JavaScript to load")
 
 def display_image_content(section):
     """Display image content"""
