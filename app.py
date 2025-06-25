@@ -50,17 +50,7 @@ def display_content_with_tabs(content, include_pictures, include_videos):
     if include_videos:
         tab_names.append("Videos")
     
-    # Debug information
-    st.write(f"Debug: Tab names = {tab_names}")
-    st.write(f"Debug: Text sections = {len(text_content)}, Image sections = {len(image_content)}, Video sections = {len(video_content)}")
-    
-    # Show sample of image content for debugging
-    if image_content:
-        st.write("Sample image content:")
-        for i, img in enumerate(image_content[:3]):
-            st.write(f"Image {i+1}: {img[:100]}...")
-    else:
-        st.write("Debug: No image content found in extracted data")
+
     
     if len(tab_names) == 1:
         # Only text content, display normally
@@ -390,7 +380,19 @@ def main():
                     return
                 
                 # Display results with enhanced styling
-                st.success(f"Successfully extracted content from: **{url_input}** (Images and media removed)")
+                # Create dynamic message based on extraction settings
+                media_status = []
+                if extract_pictures:
+                    media_status.append("images included")
+                if extract_videos:
+                    media_status.append("videos included")
+                
+                if media_status:
+                    status_text = f"({', '.join(media_status)})"
+                else:
+                    status_text = "(text only)"
+                
+                st.success(f"Successfully extracted content from: **{url_input}** {status_text}")
                 
                 # Show content statistics with better visual design
                 col1, col2, col3 = st.columns(3)

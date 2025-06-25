@@ -427,6 +427,10 @@ def extract_all_webpage_data(url: str, include_images: bool = False, include_vid
         final_content.extend(all_content)  # Title and metadata first
         final_content.extend(complete_content)  # Then ALL content in exact webpage order
         
+        # Add media content at the end
+        if media_content:
+            final_content.extend(media_content)
+        
         # Only use trafilatura as absolute fallback if DOM extraction failed completely
         if len(complete_content) < 3 and trafilatura_content:
             trafilatura_lines = trafilatura_content.split('\n')
