@@ -3,6 +3,7 @@ import requests
 import re
 from urllib.parse import urlparse
 from complete_data_extractor import extract_all_webpage_data
+from depth_scraper import scrape_with_depth
 
 # Configure the Streamlit page
 st.set_page_config(
@@ -325,16 +326,25 @@ def main():
     # Extraction options section
     st.subheader("Extraction Options")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         extract_pictures = st.checkbox("Extract Pictures", value=False, help="Include images in extraction")
-    
-    with col2:
         extract_videos = st.checkbox("Extract Videos", value=False, help="Include videos and audio in extraction")
     
-    with col3:
-        extract_button = st.button("Extract Content", type="primary")
+    with col2:
+        enable_depth = st.checkbox("Enable Depth Scraping", value=False, help="Scrape linked pages from the same domain")
+        
+        # Initialize default values
+        depth = 1
+        max_pages = 10
+        
+        # Depth options (only show when enabled)
+        if enable_depth:
+            depth = st.selectbox("Scraping Depth", [1, 2, 3], index=0, help="How many levels deep to scrape")
+            max_pages = st.slider("Max Pages", 5, 25, 10, help="Maximum number of pages to scrape")
+    
+    extract_button = st.button("Extract Content", type="primary", use_container_width=True)
     
     if extract_button:
         if not url_input:
@@ -346,10 +356,27 @@ def main():
             return
         
         # Show loading state
-        with st.spinner("Extracting content..."):
+        extraction_message = "Extracting content..."
+        if enable_depth:
+            extraction_message += f" (Depth: {depth}, Max pages: {max_pages})"
+            
+        with st.spinner(extraction_message):
             try:
-                # Extract data with selected media options
-                content = extract_all_webpage_data(url_input, include_images=extract_pictures, include_videos=extract_videos)
+                if enable_depth:
+                    # Use depth scraping
+                    content = scrape_with_depth(
+                        url_input,
+                        depth=depth,
+                        include_images=extract_pictures,
+                        include_videos=extract_videos,
+                        delay=1.0,
+                        max_pages=max_pages
+                    )
+                    is_depth_content = True
+                else:
+                    # Regular single-page extraction
+                    content = extract_all_webpage_data(url_input, include_images=extract_pictures, include_videos=extract_videos)
+                    is_depth_content = False
                 
 
                 
@@ -398,7 +425,7 @@ def main():
                 st.success(f"Successfully extracted content from: **{url_input}** {status_text}")
                 
                 # Show content statistics with better visual design
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     st.metric("📊 Total Characters", f"{len(content):,}", delta=None)
                 with col2:
@@ -407,19 +434,33 @@ def main():
                 with col3:
                     line_count = len([line for line in content.split('\n') if line.strip()])
                     st.metric("📋 Content Blocks", line_count, delta=None)
+                with col4:
+                    if enable_depth:
+                        # Count pages scraped from depth content
+                        pages_scraped = content.count("### Page ") if "### Page " in content else 1
+                        st.metric("📄 Pages Scraped", pages_scraped, delta=None)
+                    else:
+                        st.metric("🌐 Extraction Type", "Single Page", delta=None)
                 
                 # Add visual separator
                 st.markdown("---")
                 
                 # Enhanced header for content section
-                st.markdown("""
+                if enable_depth:
+                    header_title = f"Depth Scraping Results (Depth: {depth})"
+                    header_subtitle = f"Extracted content from multiple pages on {urlparse(url_input).netloc}"
+                else:
+                    header_title = "Webpage Content (Media-Free)"
+                    header_subtitle = "Preserving original webpage structure and layout"
+                
+                st.markdown(f"""
                 <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); 
                            padding: 20px; border-radius: 10px; margin: 20px 0;">
                     <h2 style="color: white; margin: 0; text-align: center;">
-                        Webpage Content (Media-Free)
+                        {header_title}
                     </h2>
                     <p style="color: #f0f0f0; text-align: center; margin: 10px 0 0 0; font-style: italic;">
-                        Preserving original webpage structure and layout
+                        {header_subtitle}
                     </p>
                 </div>
                 """, unsafe_allow_html=True)

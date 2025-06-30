@@ -4,6 +4,7 @@ from pydantic import BaseModel, HttpUrl
 from typing import Optional, Dict, List, Any
 import uvicorn
 from complete_data_extractor import extract_all_webpage_data
+from depth_scraper import scrape_with_depth
 import re
 from urllib.parse import urlparse
 
@@ -30,6 +31,14 @@ class ExtractionRequest(BaseModel):
     url: HttpUrl
     include_images: bool = False
     include_videos: bool = False
+    
+class DepthExtractionRequest(BaseModel):
+    url: HttpUrl
+    include_images: bool = False
+    include_videos: bool = False
+    depth: int = 1
+    max_pages: int = 10
+    delay: float = 1.0
 
 class ExtractionResponse(BaseModel):
     success: bool
@@ -202,6 +211,103 @@ async def extract_full_content(url: HttpUrl):
     """Extract all content types (text, images, and videos) from a webpage"""
     request = ExtractionRequest(url=url, include_images=True, include_videos=True)
     return await extract_content(request)
+
+@app.post("/extract/depth", response_model=Dict[str, Any])
+async def extract_with_depth(request: DepthExtractionRequest):
+    """
+    Extract content from a webpage with depth scraping
+    
+    - **url**: The webpage URL to start extraction from
+    - **include_images**: Whether to include images in extraction (default: false)
+    - **include_videos**: Whether to include videos in extraction (default: false)
+    - **depth**: Maximum depth to scrape (1-3, default: 1)
+    - **max_pages**: Maximum number of pages to scrape (5-50, default: 10)
+    - **delay**: Delay between requests in seconds (0.5-3.0, default: 1.0)
+    """
+    try:
+        # Validate parameters
+        if not is_valid_url(str(request.url)):
+            raise HTTPException(status_code=400, detail="Invalid URL format")
+        
+        if not (1 <= request.depth <= 3):
+            raise HTTPException(status_code=400, detail="Depth must be between 1 and 3")
+            
+        if not (5 <= request.max_pages <= 50):
+            raise HTTPException(status_code=400, detail="Max pages must be between 5 and 50")
+            
+        if not (0.5 <= request.delay <= 3.0):
+            raise HTTPException(status_code=400, detail="Delay must be between 0.5 and 3.0 seconds")
+        
+        # Extract content with depth
+        formatted_content = scrape_with_depth(
+            str(request.url),
+            depth=request.depth,
+            include_images=request.include_images,
+            include_videos=request.include_videos,
+            delay=request.delay,
+            max_pages=request.max_pages
+        )
+        
+        # Check if extraction was successful
+        if not formatted_content or len(formatted_content.strip()) < 100:
+            raise HTTPException(
+                status_code=422, 
+                detail="Unable to extract meaningful content from this URL"
+            )
+        
+        # Calculate basic statistics
+        word_count = len(formatted_content.split())
+        character_count = len(formatted_content)
+        
+        return {
+            "success": True,
+            "url": str(request.url),
+            "depth": request.depth,
+            "max_pages": request.max_pages,
+            "content": formatted_content,
+            "stats": {
+                "total_characters": character_count,
+                "word_count": word_count,
+                "extraction_type": "depth_scraping"
+            },
+            "message": f"Depth extraction completed (depth: {request.depth}, max pages: {request.max_pages})"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error in depth extraction: {str(e)}")
+
+@app.get("/extract/depth", response_model=Dict[str, Any])
+async def extract_with_depth_get(
+    url: str = Query(..., description="The webpage URL to start extraction from"),
+    include_images: bool = Query(False, description="Include images in extraction"),
+    include_videos: bool = Query(False, description="Include videos in extraction"),
+    depth: int = Query(1, description="Maximum depth to scrape (1-3)"),
+    max_pages: int = Query(10, description="Maximum pages to scrape (5-50)"),
+    delay: float = Query(1.0, description="Delay between requests (0.5-3.0 seconds)")
+):
+    """
+    Extract content with depth scraping using GET method
+    
+    Query parameters:
+    - **url**: The webpage URL to start extraction from
+    - **include_images**: Whether to include images in extraction (default: false)
+    - **include_videos**: Whether to include videos in extraction (default: false)
+    - **depth**: Maximum depth to scrape (1-3, default: 1)
+    - **max_pages**: Maximum pages to scrape (5-50, default: 10)
+    - **delay**: Delay between requests (0.5-3.0 seconds, default: 1.0)
+    """
+    # Convert to POST request format
+    request = DepthExtractionRequest(
+        url=url,
+        include_images=include_images,
+        include_videos=include_videos,
+        depth=depth,
+        max_pages=max_pages,
+        delay=delay
+    )
+    return await extract_with_depth(request)
 
 # Error handlers
 @app.exception_handler(HTTPException)

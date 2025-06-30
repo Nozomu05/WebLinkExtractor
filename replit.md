@@ -85,6 +85,9 @@ The deployment strategy prioritizes ease of deployment and automatic scaling, ma
 
 ```
 Changelog:
+- June 30, 2025: Added depth scraping functionality with configurable depth levels (1-3) and page limits (5-25)
+- June 30, 2025: Integrated depth scraping into both Streamlit interface and FastAPI endpoints
+- June 30, 2025: Enhanced UI to show scraping progress and statistics for multi-page extractions
 - June 25, 2025: Created comprehensive FastAPI REST API with full endpoint documentation and interactive Swagger UI
 - June 25, 2025: Updated deployment guide with dual-service configuration for both web interface and API server
 - June 25, 2025: Added API testing suite and usage examples for Python, JavaScript, and cURL

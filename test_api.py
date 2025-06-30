@@ -113,6 +113,35 @@ def test_api(base_url="http://localhost:8000"):
         print(f"❌ Full extraction error: {e}")
     
     print()
+    
+    # Test 6: Depth extraction
+    print("6. Testing depth extraction...")
+    try:
+        response = requests.post(
+            f"{base_url}/extract/depth",
+            json={
+                "url": "https://example.com",
+                "include_images": False,
+                "include_videos": False,
+                "depth": 1,
+                "max_pages": 5,
+                "delay": 0.5
+            },
+            headers={"Content-Type": "application/json"}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Depth extraction successful")
+            print(f"   URL: {data['url']}")
+            print(f"   Depth: {data['depth']}")
+            print(f"   Stats: {data['stats']}")
+        else:
+            print(f"❌ Depth extraction failed: {response.status_code}")
+            print(f"   Error: {response.text}")
+    except Exception as e:
+        print(f"❌ Depth extraction error: {e}")
+    
+    print()
     print("🎯 API testing completed!")
 
 if __name__ == "__main__":
