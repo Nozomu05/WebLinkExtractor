@@ -1,0 +1,776 @@
+{
+  "info": {
+    "name": "URL Content Extractor API",
+    "description": "Complete API collection for URL Content Extractor with depth scraping capabilities",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "API base URL"
+    },
+    {
+      "key": "test_url",
+      "value": "https://example.com",
+      "type": "string",
+      "description": "URL for testing extraction"
+    },
+    {
+      "key": "news_url",
+      "value": "https://www.bbc.com/news",
+      "type": "string",
+      "description": "News URL for testing"
+    },
+    {
+      "key": "blog_url",
+      "value": "https://blog.replit.com",
+      "type": "string",
+      "description": "Blog URL for testing depth scraping"
+    }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has status healthy\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"healthy\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check API health status"
+          },
+          "response": []
+        },
+        {
+          "name": "API Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains version\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('version');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Get API information and available endpoints"
+          },
+          "response": []
+        }
+      ],
+      "description": "System and health check endpoints"
+    },
+    {
+      "name": "Single Page Extraction",
+      "item": [
+        {
+          "name": "Extract Content (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains content\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData).to.have.property('content');",
+                  "    pm.expect(jsonData).to.have.property('stats');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/extract?url={{test_url}}&include_images=false&include_videos=false",
+              "host": ["{{base_url}}"],
+              "path": ["extract"],
+              "query": [
+                {
+                  "key": "url",
+                  "value": "{{test_url}}",
+                  "description": "URL to extract content from"
+                },
+                {
+                  "key": "include_images",
+                  "value": "false",
+                  "description": "Include images in extraction"
+                },
+                {
+                  "key": "include_videos",
+                  "value": "false",
+                  "description": "Include videos in extraction"
+                }
+              ]
+            },
+            "description": "Extract content from a single webpage using GET method"
+          },
+          "response": []
+        },
+        {
+          "name": "Extract Content (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Extraction successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.stats.total_characters).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{test_url}}\",\n  \"include_images\": false,\n  \"include_videos\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract",
+              "host": ["{{base_url}}"],
+              "path": ["extract"]
+            },
+            "description": "Extract content from a single webpage using POST method"
+          },
+          "response": []
+        },
+        {
+          "name": "Extract Text Only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Only text content returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.stats.image_count).to.eql(0);",
+                  "    pm.expect(jsonData.stats.video_count).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{test_url}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/text-only",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "text-only"]
+            },
+            "description": "Extract only text content from a webpage"
+          },
+          "response": []
+        },
+        {
+          "name": "Extract with Images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{news_url}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/with-images",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "with-images"]
+            },
+            "description": "Extract text and images from a webpage"
+          },
+          "response": []
+        },
+        {
+          "name": "Extract with Videos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{news_url}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/with-videos",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "with-videos"]
+            },
+            "description": "Extract text and videos from a webpage"
+          },
+          "response": []
+        },
+        {
+          "name": "Extract Full Content",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Full content extraction\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.content).to.have.property('text');",
+                  "    pm.expect(jsonData.content).to.have.property('images');",
+                  "    pm.expect(jsonData.content).to.have.property('videos');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{news_url}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/full",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "full"]
+            },
+            "description": "Extract all content types (text, images, and videos)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Single page content extraction endpoints"
+    },
+    {
+      "name": "Depth Scraping",
+      "item": [
+        {
+          "name": "Depth Extraction (POST) - Basic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Depth extraction successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.depth).to.eql(1);",
+                  "    pm.expect(jsonData.stats.extraction_type).to.eql('depth_scraping');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{test_url}}\",\n  \"include_images\": false,\n  \"include_videos\": false,\n  \"depth\": 1,\n  \"max_pages\": 5,\n  \"delay\": 0.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/depth",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "depth"]
+            },
+            "description": "Basic depth extraction with minimal settings"
+          },
+          "response": []
+        },
+        {
+          "name": "Depth Extraction (POST) - Advanced",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Advanced depth extraction\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.depth).to.eql(2);",
+                  "    pm.expect(jsonData.max_pages).to.eql(15);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{blog_url}}\",\n  \"include_images\": true,\n  \"include_videos\": false,\n  \"depth\": 2,\n  \"max_pages\": 15,\n  \"delay\": 1.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/depth",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "depth"]
+            },
+            "description": "Advanced depth extraction with images and higher depth"
+          },
+          "response": []
+        },
+        {
+          "name": "Depth Extraction (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"GET depth extraction works\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData).to.have.property('content');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/extract/depth?url={{test_url}}&depth=1&max_pages=8&delay=1.0&include_images=false&include_videos=false",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "depth"],
+              "query": [
+                {
+                  "key": "url",
+                  "value": "{{test_url}}",
+                  "description": "Starting URL for depth extraction"
+                },
+                {
+                  "key": "depth",
+                  "value": "1",
+                  "description": "Scraping depth (1-3)"
+                },
+                {
+                  "key": "max_pages",
+                  "value": "8",
+                  "description": "Maximum pages to scrape"
+                },
+                {
+                  "key": "delay",
+                  "value": "1.0",
+                  "description": "Delay between requests"
+                },
+                {
+                  "key": "include_images",
+                  "value": "false",
+                  "description": "Include images"
+                },
+                {
+                  "key": "include_videos",
+                  "value": "false",
+                  "description": "Include videos"
+                }
+              ]
+            },
+            "description": "Extract content with depth scraping using GET method"
+          },
+          "response": []
+        },
+        {
+          "name": "Maximum Depth Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{blog_url}}\",\n  \"include_images\": false,\n  \"include_videos\": false,\n  \"depth\": 3,\n  \"max_pages\": 25,\n  \"delay\": 1.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/depth",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "depth"]
+            },
+            "description": "Test maximum depth and page settings"
+          },
+          "response": []
+        }
+      ],
+      "description": "Multi-page depth scraping endpoints"
+    },
+    {
+      "name": "Error Testing",
+      "item": [
+        {
+          "name": "Invalid URL Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response format\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"invalid-url\",\n  \"include_images\": false,\n  \"include_videos\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract",
+              "host": ["{{base_url}}"],
+              "path": ["extract"]
+            },
+            "description": "Test error handling with invalid URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Depth Parameters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Validation error for depth\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.detail).to.include('depth');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{test_url}}\",\n  \"depth\": 5,\n  \"max_pages\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/depth",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "depth"]
+            },
+            "description": "Test validation with invalid depth parameters"
+          },
+          "response": []
+        }
+      ],
+      "description": "Error handling and validation tests"
+    },
+    {
+      "name": "Performance Tests",
+      "item": [
+        {
+          "name": "Quick Extraction Benchmark",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response time under 5 seconds\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test(\"Successful extraction\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{test_url}}\",\n  \"include_images\": false,\n  \"include_videos\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract",
+              "host": ["{{base_url}}"],
+              "path": ["extract"]
+            },
+            "description": "Benchmark single page extraction performance"
+          },
+          "response": []
+        },
+        {
+          "name": "Depth Scraping Benchmark",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Depth extraction completes\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Content extracted from multiple pages\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.stats.total_characters).to.be.above(500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{test_url}}\",\n  \"depth\": 2,\n  \"max_pages\": 5,\n  \"delay\": 0.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/extract/depth",
+              "host": ["{{base_url}}"],
+              "path": ["extract", "depth"]
+            },
+            "description": "Benchmark depth scraping performance"
+          },
+          "response": []
+        }
+      ],
+      "description": "Performance and load testing"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set timestamp for requests",
+          "pm.globals.set('timestamp', Date.now());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Log response time for all requests",
+          "console.log(`Request completed in ${pm.response.responseTime}ms`);"
+        ]
+      }
+    }
+  ]
+}

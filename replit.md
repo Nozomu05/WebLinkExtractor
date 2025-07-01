@@ -85,6 +85,9 @@ The deployment strategy prioritizes ease of deployment and automatic scaling, ma
 
 ```
 Changelog:
+- July 1, 2025: Created comprehensive documentation with README.md, API examples, and Postman collection
+- July 1, 2025: Added complete Postman collection with 20+ endpoints, tests, and environment variables
+- July 1, 2025: Documented all API endpoints with examples in Python, JavaScript, and cURL
 - June 30, 2025: Added depth scraping functionality with configurable depth levels (1-3) and page limits (5-25)
 - June 30, 2025: Integrated depth scraping into both Streamlit interface and FastAPI endpoints
 - June 30, 2025: Enhanced UI to show scraping progress and statistics for multi-page extractions

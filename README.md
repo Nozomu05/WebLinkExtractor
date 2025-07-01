@@ -1,593 +1,593 @@
 # URL Content Extractor
 
-A powerful web application built with Streamlit that extracts and organizes webpage content while preserving the original structure and hierarchy. The application supports text extraction, image extraction, and video extraction with an intuitive tabbed interface.
+A comprehensive web content extraction and presentation tool that transforms complex web pages into clean, structured, and readable formats with advanced parsing capabilities and depth scraping functionality.
 
-## Features
+## 🚀 Features
 
-- **Text Content Extraction**: Clean text extraction while preserving webpage structure and hierarchy
-- **Image Extraction**: Extract and display all images from webpages in a dedicated Pictures tab
-- **Video Extraction**: Detect and extract HTML5 videos, embedded content, and iframes in a Videos tab
-- **Tabbed Interface**: Organized display with separate tabs for Text, Pictures, and Videos
-- **FAQ Support**: Specialized extraction and formatting for FAQ sections
-- **Export Options**: Download extracted content as Markdown or plain text
-- **Responsive Design**: Clean, modern interface with gradient backgrounds and metrics display
-- **REST API**: Complete API interface for programmatic access and integration with other applications
+### Core Functionality
+- **Smart Content Extraction**: Extract clean text content while preserving original webpage structure
+- **Media Extraction**: Optional extraction of images and videos with separate display tabs
+- **Depth Scraping**: Crawl linked pages from the same domain with configurable depth levels
+- **Domain-Safe Crawling**: Respects robots.txt and stays within the same domain
+- **Structured Output**: Organized content with proper formatting and hierarchy
 
-## Technology Stack
+### User Interface
+- **Streamlit Web App**: Interactive web interface with real-time extraction
+- **Progress Tracking**: Visual indicators for multi-page scraping operations
+- **Download Options**: Export content as Markdown or plain text
+- **Statistics Dashboard**: Character counts, word counts, and extraction metrics
 
-- **Backend**: Python 3.11
-- **Web Framework**: Streamlit 1.46.0+
-- **API Framework**: FastAPI with Uvicorn
-- **Content Extraction**: Trafilatura 2.0.0+, BeautifulSoup4
-- **Text Processing**: NLTK 3.9.1+
-- **HTTP Requests**: Requests 2.32.4+
-- **Deployment**: Linux server with Nginx (optional) and systemd
+### API Access
+- **RESTful API**: Full programmatic access with FastAPI
+- **Multiple Endpoints**: Single-page and depth extraction options
+- **Interactive Documentation**: Swagger UI at `/docs`
+- **CORS Support**: Cross-origin requests enabled
 
-## API Documentation
+## 🛠 Technical Stack
 
-The URL Content Extractor provides a complete REST API for programmatic access to content extraction functionality.
+- **Backend**: Python 3.11+ with FastAPI and Streamlit
+- **Web Scraping**: Trafilatura for content extraction, BeautifulSoup for DOM parsing
+- **Text Processing**: NLTK for natural language processing
+- **Deployment**: Replit with autoscale configuration
+- **API Documentation**: OpenAPI/Swagger integration
 
-### API Endpoints
+## 📋 Installation & Setup
 
-**Base URL**: `http://localhost:8000` (development) or `https://your-domain.com` (production)
+### Prerequisites
+- Python 3.11+
+- pip package manager
+
+### Dependencies
+```bash
+# Core dependencies
+streamlit>=1.46.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+trafilatura>=2.0.0
+beautifulsoup4>=4.12.0
+nltk>=3.9.1
+requests>=2.32.4
+pydantic>=2.5.0
+python-multipart>=0.0.6
+```
+
+### Installation
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run the applications:
+   ```bash
+   # Start Streamlit web interface
+   streamlit run app.py --server.port 5000
+   
+   # Start FastAPI server (in separate terminal)
+   python api.py
+   ```
+
+## 🌐 Web Interface Usage
+
+### Basic Extraction
+1. Enter a URL in the input field
+2. Select extraction options:
+   - **Extract Pictures**: Include images in the output
+   - **Extract Videos**: Include videos and audio content
+3. Click "Extract Content" to process the webpage
+
+### Depth Scraping
+1. Check "Enable Depth Scraping"
+2. Configure options:
+   - **Scraping Depth** (1-3): How many levels of links to follow
+   - **Max Pages** (5-25): Maximum number of pages to scrape
+3. The system will crawl linked pages from the same domain
+
+### Results
+- View extracted content with preserved structure
+- See statistics: character count, word count, pages scraped
+- Download results as Markdown or plain text files
+
+## 🔌 API Documentation
+
+### Base URL
+```
+http://localhost:8000
+```
+
+### Authentication
+No authentication required for local deployment.
+
+### Endpoints
 
 #### Health Check
 ```http
 GET /health
 ```
-Returns API health status.
+**Response:**
+```json
+{
+  "status": "healthy",
+  "service": "url-content-extractor"
+}
+```
 
-#### Extract Content (POST)
+#### Root Information
+```http
+GET /
+```
+**Response:**
+```json
+{
+  "message": "URL Content Extractor API",
+  "version": "1.0.0",
+  "docs": "/docs",
+  "health": "/health"
+}
+```
+
+#### Single Page Extraction (GET)
+```http
+GET /extract?url={url}&include_images={boolean}&include_videos={boolean}
+```
+
+**Parameters:**
+- `url` (required): The webpage URL to extract content from
+- `include_images` (optional, default: false): Include images in extraction
+- `include_videos` (optional, default: false): Include videos in extraction
+
+**Example:**
+```http
+GET /extract?url=https://example.com&include_images=true&include_videos=false
+```
+
+#### Single Page Extraction (POST)
 ```http
 POST /extract
 Content-Type: application/json
 
 {
-    "url": "https://example.com",
-    "include_images": true,
-    "include_videos": false
+  "url": "https://example.com",
+  "include_images": false,
+  "include_videos": false
 }
 ```
 
-#### Extract Content (GET)
+#### Depth Extraction (POST)
 ```http
-GET /extract?url=https://example.com&include_images=true&include_videos=false
+POST /extract/depth
+Content-Type: application/json
+
+{
+  "url": "https://example.com",
+  "include_images": false,
+  "include_videos": false,
+  "depth": 2,
+  "max_pages": 15,
+  "delay": 1.0
+}
 ```
 
-#### Specialized Endpoints
-- `POST /extract/text-only` - Extract only text content
-- `POST /extract/with-images` - Extract text and images
-- `POST /extract/with-videos` - Extract text and videos  
-- `POST /extract/full` - Extract all content types
+**Parameters:**
+- `url` (required): Starting URL for depth extraction
+- `include_images` (optional, default: false): Include images
+- `include_videos` (optional, default: false): Include videos
+- `depth` (optional, default: 1): Scraping depth (1-3)
+- `max_pages` (optional, default: 10): Maximum pages to scrape (5-50)
+- `delay` (optional, default: 1.0): Delay between requests (0.5-3.0 seconds)
 
-### API Response Format
+#### Depth Extraction (GET)
+```http
+GET /extract/depth?url={url}&depth={int}&max_pages={int}&delay={float}
+```
+
+### Response Format
+
+#### Standard Extraction Response
 ```json
 {
-    "success": true,
-    "url": "https://example.com",
-    "content": {
-        "text": ["Section 1", "Section 2"],
-        "images": ["![alt](url1)", "![alt](url2)"],
-        "videos": ["**[VIDEO: title]**\nURL: url"]
-    },
-    "stats": {
-        "total_characters": 1500,
-        "word_count": 250,
-        "text_sections": 5,
-        "image_count": 3,
-        "video_count": 1
-    },
-    "message": "Content extracted successfully"
+  "success": true,
+  "url": "https://example.com",
+  "content": {
+    "text": ["Content sections..."],
+    "images": ["Image URLs..."],
+    "videos": ["Video URLs..."]
+  },
+  "stats": {
+    "total_characters": 1250,
+    "word_count": 200,
+    "text_sections": 5,
+    "image_count": 3,
+    "video_count": 1
+  },
+  "message": "Content extracted successfully"
 }
 ```
 
-### Interactive API Documentation
-When the API server is running, visit:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
-### API Usage Examples
-
-#### Python Example
-```python
-import requests
-
-# Extract text and images
-response = requests.post("http://localhost:8000/extract", json={
-    "url": "https://example.com",
-    "include_images": True,
-    "include_videos": False
-})
-
-if response.status_code == 200:
-    data = response.json()
-    print(f"Extracted {data['stats']['text_sections']} text sections")
-    print(f"Found {data['stats']['image_count']} images")
-else:
-    print(f"Error: {response.text}")
-```
-
-#### JavaScript Example
-```javascript
-fetch('http://localhost:8000/extract', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        url: 'https://example.com',
-        include_images: true,
-        include_videos: false
-    })
-})
-.then(response => response.json())
-.then(data => {
-    console.log('Extraction successful:', data.stats);
-    console.log('Text sections:', data.content.text.length);
-})
-.catch(error => console.error('Error:', error));
-```
-
-#### cURL Example
-```bash
-curl -X POST "http://localhost:8000/extract" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "url": "https://example.com",
-       "include_images": true,
-       "include_videos": false
-     }'
-```
-
-## Quick Start
-
-### Prerequisites
-
-- Linux server (Ubuntu 20.04+ or CentOS 8+ recommended)
-- Python 3.11 or higher
-- 2GB RAM minimum, 4GB recommended
-- 10GB disk space
-
-### Installation
-
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd url-content-extractor
-```
-
-2. **Install Python dependencies**
-```bash
-# Install Python 3.11 if not available
-sudo apt update
-sudo apt install python3.11 python3.11-pip python3.11-venv
-
-# Create virtual environment
-python3.11 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-3. **Create requirements.txt** (if not present)
-```bash
-cat > requirements.txt << EOF
-streamlit>=1.46.0
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
-trafilatura>=2.0.0
-beautifulsoup4>=4.12.0
-nltk>=3.9.1
-requests>=2.32.4
-EOF
-```
-
-4. **Download NLTK data**
-```bash
-python -c "
-import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger')
-"
-```
-
-5. **Test the applications**
-```bash
-# Test Streamlit web interface
-streamlit run app.py --server.port 8501
-
-# Test API server (in another terminal)
-python api.py
-
-# Test API endpoints
-python test_api.py
-```
-
-## Production Deployment
-
-### Method 1: Systemd Service (Recommended)
-
-This method deploys both the Streamlit web interface and the FastAPI server.
-
-1. **Create application user**
-```bash
-sudo useradd -r -s /bin/false -d /opt/url-extractor streamlit-app
-sudo mkdir -p /opt/url-extractor
-sudo chown streamlit-app:streamlit-app /opt/url-extractor
-```
-
-2. **Install application**
-```bash
-# Copy files to production directory
-sudo cp -r . /opt/url-extractor/
-sudo chown -R streamlit-app:streamlit-app /opt/url-extractor
-
-# Create virtual environment in production
-sudo -u streamlit-app python3.11 -m venv /opt/url-extractor/venv
-sudo -u streamlit-app /opt/url-extractor/venv/bin/pip install -r /opt/url-extractor/requirements.txt
-
-# Download NLTK data for production user
-sudo -u streamlit-app /opt/url-extractor/venv/bin/python -c "
-import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger')
-"
-```
-
-3. **Create Streamlit configuration**
-```bash
-sudo mkdir -p /opt/url-extractor/.streamlit
-sudo tee /opt/url-extractor/.streamlit/config.toml << EOF
-[server]
-headless = true
-address = "0.0.0.0"
-port = 8501
-enableCORS = false
-enableXsrfProtection = false
-
-[theme]
-base = "light"
-EOF
-
-sudo chown -R streamlit-app:streamlit-app /opt/url-extractor/.streamlit
-```
-
-4. **Create systemd services**
-```bash
-# Streamlit web interface service
-sudo tee /etc/systemd/system/url-extractor-web.service << EOF
-[Unit]
-Description=URL Content Extractor Streamlit Web Interface
-After=network.target
-
-[Service]
-Type=exec
-User=streamlit-app
-Group=streamlit-app
-WorkingDirectory=/opt/url-extractor
-Environment=PATH=/opt/url-extractor/venv/bin
-ExecStart=/opt/url-extractor/venv/bin/streamlit run app.py --server.port 8501 --server.address 0.0.0.0
-Restart=always
-RestartSec=3
-
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=/opt/url-extractor
-ProtectHome=true
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# FastAPI server service
-sudo tee /etc/systemd/system/url-extractor-api.service << EOF
-[Unit]
-Description=URL Content Extractor FastAPI Server
-After=network.target
-
-[Service]
-Type=exec
-User=streamlit-app
-Group=streamlit-app
-WorkingDirectory=/opt/url-extractor
-Environment=PATH=/opt/url-extractor/venv/bin
-ExecStart=/opt/url-extractor/venv/bin/python api.py
-Restart=always
-RestartSec=3
-
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=/opt/url-extractor
-ProtectHome=true
-
-[Install]
-WantedBy=multi-user.target
-EOF
-```
-
-5. **Start and enable services**
-```bash
-sudo systemctl daemon-reload
-
-# Enable and start both services
-sudo systemctl enable url-extractor-web url-extractor-api
-sudo systemctl start url-extractor-web url-extractor-api
-
-# Check status
-sudo systemctl status url-extractor-web
-sudo systemctl status url-extractor-api
-```
-
-### Method 2: Nginx Reverse Proxy (Optional)
-
-1. **Install Nginx**
-```bash
-sudo apt update
-sudo apt install nginx
-```
-
-2. **Configure Nginx**
-```bash
-sudo tee /etc/nginx/sites-available/url-extractor << EOF
-server {
-    listen 80;
-    server_name your-domain.com;  # Replace with your domain or IP
-
-    # Web interface (Streamlit)
-    location / {
-        proxy_pass http://127.0.0.1:8501;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 86400;
-    }
-    
-    # API endpoints
-    location /api/ {
-        rewrite ^/api/(.*) /\$1 break;
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 300;
-    }
+#### Depth Extraction Response
+```json
+{
+  "success": true,
+  "url": "https://example.com",
+  "depth": 2,
+  "max_pages": 15,
+  "content": "# Depth Scraping Results\n\n**Start URL:** https://example.com...",
+  "stats": {
+    "total_characters": 5240,
+    "word_count": 850,
+    "extraction_type": "depth_scraping"
+  },
+  "message": "Depth extraction completed (depth: 2, max pages: 15)"
 }
-EOF
-
-# Enable site
-sudo ln -s /etc/nginx/sites-available/url-extractor /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
 ```
 
-3. **Configure firewall**
-```bash
-sudo ufw allow 'Nginx Full'
-sudo ufw allow OpenSSH
-sudo ufw enable
+#### Error Response
+```json
+{
+  "success": false,
+  "error": "Invalid URL format",
+  "details": "URL must include http:// or https://"
+}
 ```
 
-### Method 3: Docker Deployment
+## 📮 Postman Collection
 
-1. **Create Dockerfile**
-```bash
-cat > Dockerfile << EOF
-FROM python:3.11-slim
+### Import Instructions
+1. Open Postman
+2. Click "Import" button
+3. Select "Raw text" tab
+4. Paste the collection JSON below
+5. Click "Continue" and then "Import"
 
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Download NLTK data
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
-
-# Copy application files
-COPY . .
-
-# Create Streamlit config
-RUN mkdir -p .streamlit
-COPY .streamlit/config.toml .streamlit/
-
-# Expose port
-EXPOSE 8501
-
-# Health check
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
-
-# Run application
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
-EOF
+### Collection JSON
+```json
+{
+  "info": {
+    "name": "URL Content Extractor API",
+    "description": "Complete API collection for URL Content Extractor with depth scraping capabilities",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "test_url",
+      "value": "https://example.com",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Check API health status"
+      }
+    },
+    {
+      "name": "API Info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/",
+          "host": ["{{base_url}}"],
+          "path": [""]
+        },
+        "description": "Get API information and available endpoints"
+      }
+    },
+    {
+      "name": "Extract Content (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/extract?url={{test_url}}&include_images=false&include_videos=false",
+          "host": ["{{base_url}}"],
+          "path": ["extract"],
+          "query": [
+            {
+              "key": "url",
+              "value": "{{test_url}}"
+            },
+            {
+              "key": "include_images",
+              "value": "false"
+            },
+            {
+              "key": "include_videos",
+              "value": "false"
+            }
+          ]
+        },
+        "description": "Extract content from a single webpage using GET method"
+      }
+    },
+    {
+      "name": "Extract Content (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"{{test_url}}\",\n  \"include_images\": false,\n  \"include_videos\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract",
+          "host": ["{{base_url}}"],
+          "path": ["extract"]
+        },
+        "description": "Extract content from a single webpage using POST method"
+      }
+    },
+    {
+      "name": "Extract Text Only",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"{{test_url}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract/text-only",
+          "host": ["{{base_url}}"],
+          "path": ["extract", "text-only"]
+        },
+        "description": "Extract only text content from a webpage"
+      }
+    },
+    {
+      "name": "Extract with Images",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"{{test_url}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract/with-images",
+          "host": ["{{base_url}}"],
+          "path": ["extract", "with-images"]
+        },
+        "description": "Extract text and images from a webpage"
+      }
+    },
+    {
+      "name": "Extract with Videos",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"{{test_url}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract/with-videos",
+          "host": ["{{base_url}}"],
+          "path": ["extract", "with-videos"]
+        },
+        "description": "Extract text and videos from a webpage"
+      }
+    },
+    {
+      "name": "Extract Full Content",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"{{test_url}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract/full",
+          "host": ["{{base_url}}"],
+          "path": ["extract", "full"]
+        },
+        "description": "Extract all content types (text, images, and videos)"
+      }
+    },
+    {
+      "name": "Depth Extraction (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"{{test_url}}\",\n  \"include_images\": false,\n  \"include_videos\": false,\n  \"depth\": 2,\n  \"max_pages\": 10,\n  \"delay\": 1.0\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract/depth",
+          "host": ["{{base_url}}"],
+          "path": ["extract", "depth"]
+        },
+        "description": "Extract content with depth scraping using POST method"
+      }
+    },
+    {
+      "name": "Depth Extraction (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/extract/depth?url={{test_url}}&depth=2&max_pages=10&delay=1.0&include_images=false&include_videos=false",
+          "host": ["{{base_url}}"],
+          "path": ["extract", "depth"],
+          "query": [
+            {
+              "key": "url",
+              "value": "{{test_url}}"
+            },
+            {
+              "key": "depth",
+              "value": "2"
+            },
+            {
+              "key": "max_pages",
+              "value": "10"
+            },
+            {
+              "key": "delay",
+              "value": "1.0"
+            },
+            {
+              "key": "include_images",
+              "value": "false"
+            },
+            {
+              "key": "include_videos",
+              "value": "false"
+            }
+          ]
+        },
+        "description": "Extract content with depth scraping using GET method"
+      }
+    }
+  ]
+}
 ```
-
-2. **Build and run Docker container**
-```bash
-# Build image
-docker build -t url-extractor .
-
-# Run container
-docker run -d \
-  --name url-extractor \
-  --restart unless-stopped \
-  -p 8501:8501 \
-  url-extractor
-
-# Check logs
-docker logs url-extractor
-```
-
-## SSL/HTTPS Setup (Recommended for Production)
-
-### Using Certbot (Let's Encrypt)
-
-```bash
-# Install Certbot
-sudo apt install certbot python3-certbot-nginx
-
-# Get SSL certificate
-sudo certbot --nginx -d your-domain.com
-
-# Verify auto-renewal
-sudo certbot renew --dry-run
-```
-
-## Monitoring and Maintenance
-
-### View Application Logs
-```bash
-# Web interface logs
-sudo journalctl -u url-extractor-web -f
-
-# API server logs
-sudo journalctl -u url-extractor-api -f
-
-# Application-specific logs
-sudo tail -f /opt/url-extractor/logs/app.log
-```
-
-### Performance Monitoring
-```bash
-# Check system resources
-htop
-df -h
-free -m
-
-# Check service status
-sudo systemctl status url-extractor-web url-extractor-api nginx
-```
-
-### Backup Strategy
-```bash
-# Create backup script
-sudo tee /opt/backup-url-extractor.sh << EOF
-#!/bin/bash
-DATE=$(date +%Y%m%d_%H%M%S)
-tar -czf /backup/url-extractor-\$DATE.tar.gz /opt/url-extractor
-find /backup -name "url-extractor-*.tar.gz" -mtime +7 -delete
-EOF
-
-sudo chmod +x /opt/backup-url-extractor.sh
-
-# Add to crontab for daily backups
-echo "0 2 * * * /opt/backup-url-extractor.sh" | sudo crontab -
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Services won't start**
-```bash
-# Check web interface
-sudo journalctl -u url-extractor-web --no-pager
-sudo systemctl status url-extractor-web
-
-# Check API server
-sudo journalctl -u url-extractor-api --no-pager
-sudo systemctl status url-extractor-api
-```
-
-2. **Permission denied errors**
-```bash
-sudo chown -R streamlit-app:streamlit-app /opt/url-extractor
-sudo chmod +x /opt/url-extractor/app.py
-```
-
-3. **NLTK data missing**
-```bash
-sudo -u streamlit-app /opt/url-extractor/venv/bin/python -c "
-import nltk
-nltk.download('punkt', force=True)
-nltk.download('stopwords', force=True)
-nltk.download('averaged_perceptron_tagger', force=True)
-"
-```
-
-4. **Memory issues**
-```bash
-# Check memory usage
-free -m
-# Restart services if needed
-sudo systemctl restart url-extractor-web url-extractor-api
-```
-
-### Log Locations
-- **Web interface logs**: `sudo journalctl -u url-extractor-web`
-- **API server logs**: `sudo journalctl -u url-extractor-api`
-- **Nginx logs**: `/var/log/nginx/access.log` and `/var/log/nginx/error.log`
-- **System logs**: `/var/log/syslog`
-
-## Configuration
 
 ### Environment Variables
-```bash
-# Optional: Set in /opt/url-extractor/.env
-STREAMLIT_SERVER_PORT=8501
-STREAMLIT_SERVER_ADDRESS=0.0.0.0
-STREAMLIT_SERVER_HEADLESS=true
-```
+Set these variables in Postman for easy testing:
+
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `base_url` | `http://localhost:8000` | API base URL |
+| `test_url` | `https://example.com` | URL for testing extraction |
+
+### Testing Workflow
+1. **Health Check**: Verify API is running
+2. **API Info**: Get endpoint information
+3. **Single Page Extraction**: Test basic extraction
+4. **Depth Extraction**: Test multi-page crawling
+5. **Media Extraction**: Test with images/videos enabled
+
+## 🔧 Configuration
 
 ### Streamlit Configuration
-Edit `/opt/url-extractor/.streamlit/config.toml`:
+Create `.streamlit/config.toml`:
 ```toml
 [server]
 headless = true
 address = "0.0.0.0"
-port = 8501
-maxUploadSize = 200
-
-[theme]
-base = "light"
-primaryColor = "#ff6b6b"
+port = 5000
 ```
 
-## Security Considerations
+### API Configuration
+- Default port: 8000
+- CORS enabled for all origins
+- Auto-reload enabled in development
 
-1. **Firewall Configuration**
-```bash
-sudo ufw deny 8501  # Block direct access to Streamlit
-sudo ufw allow 'Nginx Full'
-```
+### Depth Scraping Limits
+- **Depth Levels**: 1-3 (configurable)
+- **Max Pages**: 5-50 (configurable)
+- **Request Delay**: 0.5-3.0 seconds (configurable)
+- **Same Domain Only**: Automatic domain filtering
 
-2. **Regular Updates**
-```bash
-sudo apt update && sudo apt upgrade
-pip install --upgrade -r requirements.txt
-```
+## 🚨 Error Handling
 
-3. **Log Monitoring**
-```bash
-# Monitor for suspicious activity
-sudo tail -f /var/log/nginx/access.log | grep -E "(POST|PUT|DELETE)"
-```
+### Common Error Codes
 
-## Support
+| Code | Description | Solution |
+|------|-------------|----------|
+| 400 | Invalid URL format | Ensure URL includes http:// or https:// |
+| 422 | Unprocessable content | Check if URL contains extractable content |
+| 429 | Rate limiting | Reduce request frequency |
+| 500 | Server error | Check server logs for details |
 
-For issues and questions:
-- Check the troubleshooting section above
-- Review application logs
-- Ensure all dependencies are properly installed
-- Verify network connectivity and firewall settings
+### Troubleshooting
 
-## License
+#### No Content Extracted
+- Website may require JavaScript
+- Content behind paywall/login
+- Anti-bot protection active
+- Try different URLs (news sites, blogs, documentation)
 
-This project is open source. Please check the license file for details.
+#### Depth Scraping Issues
+- Verify domain has linkable pages
+- Check if robots.txt blocks crawling
+- Reduce depth/max_pages if timing out
+
+## 📊 Performance
+
+### Benchmarks
+- **Single Page**: ~2-5 seconds average
+- **Depth Scraping**: Varies by page count and delay settings
+- **API Throughput**: ~10-20 requests/second
+- **Memory Usage**: ~50-100MB per extraction
+
+### Optimization Tips
+- Use appropriate delay settings (1-2 seconds recommended)
+- Limit max_pages for faster results
+- Cache frequently accessed content
+- Use GET endpoints for simpler requests
+
+## 🤝 Contributing
+
+### Development Setup
+1. Fork the repository
+2. Create feature branch
+3. Install development dependencies
+4. Run tests: `python test_api.py`
+5. Submit pull request
+
+### Code Style
+- Follow PEP 8 guidelines
+- Use type hints where possible
+- Add docstrings for functions
+- Include error handling
+
+## 📝 License
+
+This project is open source and available under the MIT License.
+
+## 🔗 Links
+
+- **Web Interface**: http://localhost:5000
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **OpenAPI Spec**: http://localhost:8000/openapi.json
+
+## 📞 Support
+
+For issues, questions, or feature requests, please contact the development team or create an issue in the project repository.
